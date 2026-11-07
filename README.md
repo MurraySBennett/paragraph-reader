@@ -2,6 +2,8 @@
 
 A quiet, one-chunk-at-a-time reader for text you bring yourself. Read by paragraph, sentence, or a page-length group of paragraphs; add notes when useful; play a selected passage one word at a time. It runs entirely in the browser. There is no account, upload, analytics, or server-side document storage.
 
+**Use online:** https://murraysbennett.github.io/paragraph-reader/
+
 ## Use locally
 
 ```sh
