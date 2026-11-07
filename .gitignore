@@ -5,3 +5,4 @@ __pycache__/
 dist/*
 !dist/paragraph-reader.html
 .DS_Store
+.worktrees/
