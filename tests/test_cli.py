@@ -29,6 +29,20 @@ class CliTest(unittest.TestCase):
             self.assertEqual(page.stat().st_mode & 0o777, 0o600)
             page.unlink()
 
+    def test_tex_bootstrap_keeps_format_commands_for_browser_parser(self):
+        cli = runpy.run_path(str(Path(__file__).parents[1] / 'bin' / 'paragraph-reader'))
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / 'methods.tex'
+            original = r'\section{Methods} A \textbf{bold} result.'
+            source.write_text(original, encoding='utf-8')
+            self.assertEqual(cli['load_text'](source), original)
+            page = cli['build_page'](source, original)
+            html = page.read_text(encoding='utf-8')
+            self.assertIn('data-prepared="false"', html)
+            match = re.search(r'id="boot-text"[^>]*data-encoding="base64"[^>]*>([^<]+)</script>', html)
+            self.assertEqual(base64.b64decode(match.group(1)).decode('utf-8'), original)
+            page.unlink()
+
 
 if __name__ == '__main__':
     unittest.main()

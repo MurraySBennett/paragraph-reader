@@ -6,15 +6,16 @@
 - Published at https://murraysbennett.github.io/paragraph-reader/; GitHub Pages workflow passed unit, CLI, browser, and build checks.
 - The terminal helper remains at `tools/paragraph-reader`; its cached HTML page accepts files locally and explains how to open another PDF through the helper.
 - Both structured-passage/DOCX and examples/offline designs are approved together. Execution plan: `docs/superpowers/plans/2026-11-07-structured-import-examples-offline.md`.
-- The plan is drafted through the release gate and pending user review/explicit launch. No product implementation has begun.
+- New `/goal` launched for native execution in `feat/structured-offline-release`. Milestone 1/7 complete: plain, Markdown, and simple TeX share a validated passage model; CLI TeX retains source commands for that parser. Node 17 and Python 3 tests pass.
+- Milestone 2/7 next: local DOCX and unified file import. The CLI/browser TeX equivalence is fully exercised once the reader UI consumes the shared parser in milestone 4.
 - The Spanish story is drafted inside the examples spec. Source curation, license checks, sample packaging, and local-file PDF/DOCX verification are implementation tasks.
 
 ## build
 
-- [ ] now — Build the approved six-example library and homepage entry points after verifying source rights and formats; design reviewed, awaiting approval.
-- [ ] now — Build installable offline browser access, a downloadable desktop copy, and repo guidance; design reviewed, awaiting approval. Native installers remain later.
+- [ ] next — Build the approved six-example library and homepage entry points after verifying source rights and formats.
+- [ ] next — Build installable offline browser access, a downloadable desktop copy, and repo guidance. Native installers remain later.
 - [ ] later — Design a notes review space and better Markdown export, with optional local copyable prompt composition for an external AI assistant; no automatic sending.
-- [ ] now — Design supported inline formatting across document types and reader font families, including a dyslexia-oriented option; leave preamble grouping unchanged unless requested again.
+- [ ] now — Implement structured passages and font families, including a dyslexia-oriented option; leave preamble grouping unchanged unless requested again.
 - [x] 2026-11-07 — Implement the public reader design, verify it, and publish the static release.
 - [x] 2026-11-07 — Add paragraph/sentence/page chunking and content-fingerprint storage with backup validation.
 - [x] 2026-11-07 — Add top bar, optional resizable notes, keyboard focus, themes, and typography controls.
