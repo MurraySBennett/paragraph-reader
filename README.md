@@ -18,7 +18,7 @@ The terminal helper accepts `.txt`, `.md`, `.tex`, and text-based `.pdf` files:
 bin/paragraph-reader path/to/file.pdf
 ```
 
-It uses `pdftotext` for PDFs and opens a self-contained HTML page cached by document content under `~/.cache/paragraph-reader`. The browser page extracts PDFs locally with PDF.js; scanned PDFs need OCR first. TeX extraction is best-effort and does not interpret equations or complex macros.
+It uses `pdftotext` for PDFs and opens a self-contained HTML page cached by document content under `~/.cache/paragraph-reader`. To open another PDF from that local page, run the helper again with the new file. The hosted browser page extracts PDFs locally with PDF.js; scanned PDFs need OCR first. TeX extraction is best-effort and does not interpret equations or complex macros.
 
 ## Controls and data
 
@@ -38,3 +38,5 @@ npx playwright test
 ```
 
 On NixOS, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE` to a working Chromium wrapper path when running browser tests. `npm run build` makes `dist/index.html` for static hosting and `dist/paragraph-reader.html` for the CLI.
+
+PDF.js is distributed under the Apache License 2.0; its license is included at `vendor/LICENSE` and copied into the hosted release.

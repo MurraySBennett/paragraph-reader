@@ -3,8 +3,8 @@
 ## Now
 
 - Public reader goal active. Plan: `docs/superpowers/plans/2026-11-07-public-reader.md`.
-- Static release and CLI integration implemented; local unit, browser, CLI, and accessibility checks pass.
-- Next: independent code review, repair any material findings, then publish the verified build.
+- Independent review completed. Persistence, backup validation, keyboard access, CLI TeX/PDF handling, and license packaging have been repaired.
+- Next: rerun the complete release checks, publish the public Pages site, and verify the live URL.
 - Publication route: public GitHub repository with a Pages workflow is prepared, pending final release checks.
 
 ## build

@@ -32,3 +32,11 @@ test('backup round trip retains text, bookmark and anchored notes', async () => 
   assert.equal(restored.document.notes[1].text, 'Look again');
   assert.deepEqual(restored.preferences, { theme: 'night', notes: false });
 });
+
+test('backup rejects invalid preferences and notes containers', async () => {
+  const doc = await createDocument('sample.txt', 'Safe text.');
+  await assert.rejects(parseBackup(JSON.stringify({ version: 2, document: doc, preferences: { fontSize: -100 } })), /backup/i);
+  await assert.rejects(parseBackup(JSON.stringify({ version: 2, document: doc, preferences: { theme: 'missing' } })), /backup/i);
+  doc.notes = [];
+  await assert.rejects(parseBackup(JSON.stringify({ version: 2, document: doc })), /backup/i);
+});

@@ -7,6 +7,13 @@ from pathlib import Path
 
 
 class CliTest(unittest.TestCase):
+    def test_tex_items_keep_their_text(self):
+        cli = runpy.run_path(str(Path(__file__).parents[1] / 'bin' / 'paragraph-reader'))
+        text = cli['strip_tex'](r'\begin{itemize}\item One\item Two\end{itemize}' + '\n\nAfter list.')
+        self.assertIn('One', text)
+        self.assertIn('Two', text)
+        self.assertIn('After list.', text)
+
     def test_bootstrapped_page_preserves_unicode_and_script_like_text(self):
         cli = runpy.run_path(str(Path(__file__).parents[1] / 'bin' / 'paragraph-reader'))
         with tempfile.TemporaryDirectory() as directory:

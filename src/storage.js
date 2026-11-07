@@ -1,6 +1,26 @@
 import { splitParagraphs } from './content.js';
 
 const KEY = 'paragraph-reader:v2:';
+const preferenceRules = {
+  unit: value => ['paragraph', 'sentence', 'page'].includes(value),
+  notes: value => typeof value === 'boolean',
+  theme: value => ['system', 'paper', 'warm', 'slate', 'night', 'contrast', 'custom'].includes(value),
+  fontSize: value => Number.isInteger(value) && value >= 16 && value <= 32,
+  lineHeight: value => typeof value === 'number' && Number.isFinite(value) && value >= 1.3 && value <= 2.2,
+  textWidth: value => Number.isInteger(value) && value >= 35 && value <= 85,
+  pageWords: value => Number.isInteger(value) && value >= 50 && value <= 1000,
+  wordWpm: value => Number.isInteger(value) && value >= 100 && value <= 800,
+  notesWidth: value => Number.isInteger(value) && value >= 20 && value <= 65,
+  editorHeight: value => Number.isInteger(value) && value >= 120 && value <= 600,
+  customBg: value => /^#[0-9a-f]{6}$/i.test(value),
+  customText: value => /^#[0-9a-f]{6}$/i.test(value),
+  customAccent: value => /^#[0-9a-f]{6}$/i.test(value),
+};
+
+export function validPreferences(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value) &&
+    Object.entries(value).every(([key, setting]) => preferenceRules[key]?.(setting) === true);
+}
 
 export async function fingerprint(text) {
   const bytes = new TextEncoder().encode(String(text));
@@ -31,7 +51,7 @@ export async function parseBackup(json) {
   let data;
   try { data = JSON.parse(json); } catch { throw new Error('Invalid backup JSON.'); }
   const doc = data?.document;
-  if (data?.version !== 2 || !doc || doc.version !== 2 || typeof doc.text !== 'string' || typeof doc.name !== 'string' || !doc.notes || typeof doc.notes !== 'object' || !Number.isInteger(doc.index)) {
+  if (data?.version !== 2 || !doc || doc.version !== 2 || typeof doc.text !== 'string' || typeof doc.name !== 'string' || !doc.notes || typeof doc.notes !== 'object' || Array.isArray(doc.notes) || !Number.isInteger(doc.index)) {
     throw new Error('Invalid paragraph reader backup.');
   }
   const paragraphs = splitParagraphs(doc.text);
@@ -41,6 +61,6 @@ export async function parseBackup(json) {
     if (!Number.isInteger(i) || i < 0 || i >= paragraphs.length || typeof note?.text !== 'string' || note.source !== await fingerprint(paragraphs[i])) throw new Error('Invalid paragraph reader backup.');
   }
   const preferences = data.preferences ?? {};
-  if (!preferences || typeof preferences !== 'object' || Array.isArray(preferences)) throw new Error('Invalid paragraph reader backup.');
+  if (!validPreferences(preferences)) throw new Error('Invalid paragraph reader backup.');
   return { document: doc, preferences };
 }

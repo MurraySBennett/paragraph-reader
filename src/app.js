@@ -1,5 +1,5 @@
 import { prepareText, splitParagraphs, makeChunks } from './content.js';
-import { createDocument, fingerprint, loadDocument, saveDocument, parseBackup } from './storage.js';
+import { createDocument, fingerprint, loadDocument, saveDocument, parseBackup, validPreferences } from './storage.js';
 import { WordPlayer } from './word-mode.js';
 import { readPdf } from './pdf.js';
 
@@ -9,7 +9,7 @@ let doc = null, paragraphs = [], paragraphHashes = [], chunks = [], chunkIndex =
 const PREF_KEY = 'paragraph-reader:preferences:v2';
 const defaults = { unit: 'paragraph', notes: true, theme: 'system', fontSize: 20, lineHeight: 1.7, textWidth: 64, pageWords: 250, wordWpm: 300, notesWidth: 34, editorHeight: 240, customBg: '#f8f5ef', customText: '#202327', customAccent: '#345f68' };
 let prefs = { ...defaults };
-try { prefs = { ...defaults, ...JSON.parse(localStorage.getItem(PREF_KEY) || '{}') }; } catch {}
+try { const saved = JSON.parse(localStorage.getItem(PREF_KEY) || '{}'); if (validPreferences(saved)) prefs = { ...defaults, ...saved }; } catch {}
 
 function status(message, error = false) {
   const el = $('toast');
@@ -56,6 +56,7 @@ function setNotesVisible(visible, save = true) {
 function saveDocSoon() { clearTimeout(saveTimer); saveTimer = setTimeout(saveDoc, 180); }
 function saveDoc() {
   if (!doc) return;
+  clearTimeout(saveTimer);
   doc.updated = new Date().toISOString();
   try { saveDocument(localStorage, doc); } catch { status('Could not save this document. Download a backup.', true); }
 }
@@ -103,8 +104,8 @@ function setUnit(unit) {
   savePrefs(); render();
 }
 
-async function openDocument(text, name = 'Pasted text') {
-  const prepared = prepareText(text, name);
+async function openDocument(text, name = 'Pasted text', preparedAlready = false) {
+  const prepared = preparedAlready ? text : prepareText(text, name);
   try {
     const nextDoc = await createDocument(name, prepared);
     const saved = loadDocument(localStorage, nextDoc.id);
@@ -117,8 +118,8 @@ async function openDocument(text, name = 'Pasted text') {
     setup.hidden = true; shell.hidden = false;
     chunks = makeChunks(paragraphs, prefs.unit, prefs.pageWords);
     chunkIndex = Math.max(0, chunks.findIndex(chunk => chunk.start <= doc.index && chunk.end >= doc.index));
-    render(); card.focus();
-  } catch (error) { $('setup-status').textContent = error.message || 'Could not read this document.'; }
+    render(); card.focus(); return true;
+  } catch (error) { $('setup-status').textContent = error.message || 'Could not read this document.'; return false; }
 }
 
 function move(delta) { if (!doc) return; const target = Math.max(0, Math.min(chunks.length - 1, chunkIndex + delta)); if (target !== chunkIndex) { chunkIndex = target; noteAnchor = null; render(); } }
@@ -129,9 +130,10 @@ $('file').addEventListener('change', async event => {
   const file = event.target.files?.[0]; if (!file) return;
   try {
     $('setup-status').textContent = 'Opening file…';
-    const text = /\.pdf$/i.test(file.name) || file.type === 'application/pdf' ? await readPdf(file) : await file.text();
-    await openDocument(text, file.name);
-    $('setup-status').textContent = '';
+    const pdf = /\.pdf$/i.test(file.name) || file.type === 'application/pdf';
+    if (pdf && $('boot-text').dataset.cli === 'true') throw new Error('To open a PDF from a local reader page, run paragraph-reader <file.pdf> in the terminal.');
+    const text = pdf ? await readPdf(file) : await file.text();
+    if (await openDocument(text, file.name)) $('setup-status').textContent = '';
   } catch (error) { $('setup-status').textContent = error.message || 'Could not open that file.'; }
   event.target.value = '';
 });
@@ -144,7 +146,7 @@ note.addEventListener('input', () => {
   const i = noteAnchor ?? chunks[chunkIndex].start;
   if (note.value.trim()) doc.notes[i] = { text: note.value, source: paragraphHashes[i] };
   else delete doc.notes[i];
-  renderNoteIndexWithoutInput(); saveDocSoon();
+  renderNoteIndexWithoutInput(); saveDoc();
 });
 function renderNoteIndexWithoutInput() { const start = note.selectionStart, end = note.selectionEnd; renderNotes(); note.focus(); note.setSelectionRange(start, end); }
 
@@ -193,7 +195,7 @@ $('export-notes').addEventListener('click', () => {
   if (lines.length === 4) lines.push('_No notes yet._');
   download(`${safeName()}.notes.md`, lines.join('\n'), 'text/markdown;charset=utf-8');
 });
-$('import-backup').addEventListener('change', async event => {
+async function restoreBackup(event) {
   const file = event.target.files?.[0]; if (!file) return;
   try {
     const restored = await parseBackup(await file.text());
@@ -207,9 +209,14 @@ $('import-backup').addEventListener('change', async event => {
     chunks = makeChunks(paragraphs, prefs.unit, prefs.pageWords);
     chunkIndex = Math.max(0, chunks.findIndex(chunk => chunk.start <= doc.index && chunk.end >= doc.index));
     render(); saveDoc(); $('utilities').hidden = true; status('Backup restored');
-  } catch (error) { status(error.message || 'Could not restore backup.', true); }
+  } catch (error) {
+    const message = error.message || 'Could not restore backup.';
+    if (setup.hidden) status(message, true);
+    else $('setup-status').textContent = message;
+  }
   event.target.value = '';
-});
+}
+for (const id of ['import-backup', 'setup-import-backup']) $(id).addEventListener('change', restoreBackup);
 
 const player = new WordPlayer({
   onWord: (word, index, total) => { $('word-display').textContent = word; $('word-progress').textContent = `${index} / ${total}`; },
@@ -217,7 +224,7 @@ const player = new WordPlayer({
 });
 function finishWordMode() {
   player.stop(false);
-  $('word-mode').hidden = true;
+  if ($('word-mode').open) $('word-mode').close();
   $('word-play').textContent = 'Pause';
   noteAnchor = wordSourceAnchor;
   renderNotes();
@@ -243,7 +250,7 @@ $('word-start').addEventListener('click', () => {
     }
   }
   if (!text) return;
-  $('word-mode').hidden = false;
+  $('word-mode').showModal();
   $('word-display').textContent = '';
   $('word-play').textContent = 'Pause';
   $('word-exit').focus();
@@ -256,7 +263,15 @@ $('word-play').addEventListener('click', () => {
   else { player.pause(); $('word-play').textContent = 'Play'; }
 });
 $('word-speed').addEventListener('input', event => { player.setWpm(event.target.value); prefs.wordWpm = player.wpm; $('word-speed-value').textContent = `${player.wpm} WPM`; savePrefs(); });
-$('word-mode').addEventListener('keydown', event => { if (event.key === 'Escape') { event.preventDefault(); finishWordMode(); } });
+$('word-mode').addEventListener('keydown', event => {
+  if (event.key === 'Escape') { event.preventDefault(); finishWordMode(); }
+  if (event.key === 'Tab') {
+    const controls = [$('word-exit'), $('word-play'), $('word-speed')];
+    const current = controls.indexOf(document.activeElement);
+    if (event.shiftKey && current <= 0) { event.preventDefault(); controls.at(-1).focus(); }
+    else if (!event.shiftKey && current === controls.length - 1) { event.preventDefault(); controls[0].focus(); }
+  }
+});
 
 function setNotesWidth(value) { prefs.notesWidth = Math.max(20, Math.min(65, value)); document.documentElement.style.setProperty('--notes-width', `${prefs.notesWidth}%`); $('pane-resizer').setAttribute('aria-valuenow', String(prefs.notesWidth)); savePrefs(); }
 function setEditorHeight(value) { prefs.editorHeight = Math.max(120, Math.min(600, value)); document.documentElement.style.setProperty('--editor-height', `${prefs.editorHeight}px`); $('note-resizer').setAttribute('aria-valuenow', String(prefs.editorHeight)); savePrefs(); }
@@ -277,7 +292,7 @@ wireResizer($('pane-resizer'), true); wireResizer($('note-resizer'), false);
 $('reset-layout').addEventListener('click', () => { setNotesWidth(34); setEditorHeight(240); });
 
 document.addEventListener('keydown', event => {
-  if (shell.hidden || !($('word-mode').hidden) || $('appearance').open || $('shortcuts').open) return;
+  if (event.defaultPrevented || shell.hidden || $('word-mode').open || $('appearance').open || $('shortcuts').open) return;
   if (event.key === 'Escape' && document.activeElement === note) { event.preventDefault(); card.focus(); return; }
   const target = event.target;
   if (target instanceof HTMLElement && (target.matches('input, textarea, select, button') || target.isContentEditable)) return;
@@ -293,5 +308,6 @@ if (boot.textContent.trim()) {
   const text = boot.dataset.encoding === 'base64'
     ? new TextDecoder().decode(Uint8Array.from(atob(boot.textContent.trim()), char => char.charCodeAt(0)))
     : boot.textContent;
-  openDocument(text, boot.dataset.source || 'File');
+  openDocument(text, boot.dataset.source || 'File', boot.dataset.prepared === 'true');
 }
+window.addEventListener('pagehide', saveDoc);

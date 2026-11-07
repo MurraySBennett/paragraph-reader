@@ -67,13 +67,13 @@ test('backup restores notes while malformed import leaves current work alone', a
   await page.getByRole('button', { name: 'Download backup' }).click();
   const saved = await download;
   await expect(page.getByRole('status').last()).toContainText('downloaded');
-  await page.getByLabel('Restore backup').setInputFiles({ name: 'bad.json', mimeType: 'application/json', buffer: Buffer.from('{bad') });
+  await page.locator('#import-backup').setInputFiles({ name: 'bad.json', mimeType: 'application/json', buffer: Buffer.from('{bad') });
   await expect(page.getByLabel('Note for current paragraph')).toHaveValue('Important note');
   await page.getByRole('button', { name: 'New document' }).click();
   await page.getByLabel('Paste text').fill('Different document.');
   await page.getByRole('button', { name: 'Start reading' }).click();
   await page.getByRole('button', { name: 'Utilities' }).click();
-  await page.getByLabel('Restore backup').setInputFiles(await saved.path());
+  await page.locator('#import-backup').setInputFiles(await saved.path());
   await expect(page.getByRole('heading', { name: 'Keep this paragraph.' })).toBeVisible();
   await expect(page.getByLabel('Note for current paragraph')).toHaveValue('Important note');
 });
@@ -96,6 +96,20 @@ test('self-contained CLI page opens bootstrapped text from file URL', async ({ p
   const path = execFileSync('python3', ['-c', `import runpy; from pathlib import Path; c=runpy.run_path('bin/paragraph-reader'); print(c['build_page'](Path('sample.txt'), 'CLI café text.').as_uri())`], { cwd: process.cwd(), encoding: 'utf8' }).trim();
   await page.goto(path);
   await expect(page.getByRole('heading', { name: 'CLI café text.' })).toBeVisible();
+  await page.getByRole('button', { name: 'Utilities' }).click();
+  await page.getByRole('button', { name: 'New document' }).click();
+  await page.locator('#file').setInputFiles({ name: 'sample.pdf', mimeType: 'application/pdf', buffer: Buffer.from('PDF') });
+  await expect(page.locator('#setup-status')).toContainText('paragraph-reader <file.pdf>');
+});
+
+test('CLI TeX page keeps list items and following prose', async ({ page }) => {
+  const path = execFileSync('python3', ['-c', `import runpy; from pathlib import Path; c=runpy.run_path('bin/paragraph-reader'); p=Path('sample.tex'); print(c['build_page'](p, c['strip_tex'](r'\\begin{itemize}\\item One\\item Two\\end{itemize}' + chr(10)*2 + 'After list.')).as_uri())`], { cwd: process.cwd(), encoding: 'utf8' }).trim();
+  await page.goto(path);
+  await expect(page.locator('#chunk-text')).toContainText('One');
+  await page.getByRole('button', { name: 'Next chunk' }).click();
+  await expect(page.locator('#chunk-text')).toContainText('Two');
+  await page.getByRole('button', { name: 'Next chunk' }).click();
+  await expect(page.locator('#chunk-text')).toContainText('After list.');
 });
 
 test('selected passage in a page returns notes to its source paragraph', async ({ page }) => {
@@ -142,4 +156,44 @@ test('static release serves the reader from its own directory', async ({ page })
   await page.getByLabel('Paste text').fill('Hosted reading works.');
   await page.getByRole('button', { name: 'Start reading' }).click();
   await expect(page.getByRole('heading', { name: 'Hosted reading works.' })).toBeVisible();
+});
+
+test('notes survive an immediate reload and separator keys do not navigate', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel('Paste text').fill('First paragraph.\n\nSecond paragraph.');
+  await page.getByRole('button', { name: 'Start reading' }).click();
+  await page.getByLabel('Note for current paragraph').fill('Keep immediately');
+  await page.reload();
+  await page.getByLabel('Paste text').fill('First paragraph.\n\nSecond paragraph.');
+  await page.getByRole('button', { name: 'Start reading' }).click();
+  await expect(page.getByLabel('Note for current paragraph')).toHaveValue('Keep immediately');
+  await page.getByRole('separator', { name: 'Resize notes panel' }).focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.getByRole('heading', { name: 'First paragraph.' })).toBeVisible();
+});
+
+test('file controls are keyboard reachable and backup restores from setup', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#file').focus();
+  await expect(page.locator('#file')).toBeFocused();
+  const doc = await page.evaluate(async () => {
+    const text = 'Restored from setup.';
+    const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+    const id = [...new Uint8Array(hash)].map(x => x.toString(16).padStart(2, '0')).join('');
+    return { version: 2, id, name: 'backup.txt', text, index: 0, notes: {}, updated: new Date().toISOString() };
+  });
+  await page.locator('#setup-import-backup').setInputFiles({ name: 'reading.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ version: 2, document: doc, preferences: {} })) });
+  await expect(page.getByRole('heading', { name: 'Restored from setup.' })).toBeVisible();
+});
+
+test('word reader keeps keyboard focus inside its dialog', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel('Paste text').fill('One two three four five six seven eight nine ten.');
+  await page.getByRole('button', { name: 'Start reading' }).click();
+  await page.getByRole('button', { name: 'Read words' }).click();
+  await expect(page.getByRole('dialog', { name: 'Word reader' })).toBeVisible();
+  await page.keyboard.press('Shift+Tab');
+  expect(await page.evaluate(() => document.activeElement.closest('#word-mode') !== null)).toBe(true);
+  await page.getByRole('button', { name: 'Back to reading' }).click();
+  await expect(page.getByLabel('Reader text')).toBeFocused();
 });

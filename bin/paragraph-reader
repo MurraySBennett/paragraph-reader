@@ -64,7 +64,7 @@ def strip_tex(src: str) -> str:
         r"\n\n\2\n\n",
         s,
     )
-    s = re.sub(r"\\item\b\[?[^\]]*\]?", "\n\n", s)
+    s = re.sub(r"\\item\b(?:\[[^\]]*\])?", "\n\n", s)
 
     keep = (
         "emph|textbf|textit|textrm|textsf|texttt|textsc|underline|"
@@ -169,7 +169,7 @@ def build_page(source: Path, text: str) -> Path:
     payload = (
         '<script id="boot-text" type="text/plain" data-source="'
         + html.escape(source.name, quote=True)
-        + '" data-encoding="base64">'
+        + '" data-encoding="base64" data-cli="true" data-prepared="true">'
         + base64.b64encode(text.encode("utf-8")).decode("ascii")
         + "</script>"
     )

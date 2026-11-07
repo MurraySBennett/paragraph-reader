@@ -19,6 +19,7 @@
     <textarea id="input" aria-label="Paste text" placeholder="Paste an article, draft, or passage here…"></textarea>
     <div class="setup-actions">
       <label class="button file-button">Open a file<input id="file" type="file" accept=".txt,.md,.markdown,.tex,.ltx,.pdf,text/plain,text/markdown,application/pdf"></label>
+      <label class="button file-button">Restore backup<input id="setup-import-backup" type="file" accept=".json,application/json"></label>
       <button id="start" class="primary">Start reading <span aria-hidden="true">→</span></button>
     </div>
     <p class="muted small">Text, Markdown, TeX, and text-based PDF. Files are processed on this device.</p>
@@ -82,11 +83,11 @@
 
   <dialog id="shortcuts" aria-labelledby="shortcuts-title"><div class="dialog-head"><h2 id="shortcuts-title">Keyboard shortcuts</h2><button id="shortcuts-close" type="button" aria-label="Close keyboard shortcuts">×</button></div><p><kbd>←</kbd> and <kbd>→</kbd> move between chunks. <kbd>N</kbd> focuses notes. <kbd>Esc</kbd> returns to reading. Shortcuts pause while you type in a field.</p></dialog>
 
-  <div id="word-mode" class="word-mode" hidden role="dialog" aria-modal="true" aria-label="Word reader">
+  <dialog id="word-mode" class="word-mode" aria-label="Word reader">
     <div class="word-top"><button id="word-exit" type="button">← Back to reading</button><span id="word-progress"></span></div>
     <div id="word-display" class="word-display" aria-live="off"></div>
     <div class="word-controls"><button id="word-play" type="button">Pause</button><label>Speed <input id="word-speed" aria-label="Words per minute" type="range" min="100" max="800" step="25" value="300"><output id="word-speed-value">300 WPM</output></label></div>
-  </div>
+  </dialog>
   <script id="boot-text" type="text/plain" data-source=""></script>
   <script type="module" src="./src/app.js"></script>
 </body>
