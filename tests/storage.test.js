@@ -1,0 +1,33 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { fingerprint, createDocument, saveDocument, loadDocument, parseBackup } from '../src/storage.js';
+
+function memoryStorage() {
+  const map = new Map();
+  return { getItem: k => map.get(k) ?? null, setItem: (k, v) => map.set(k, v) };
+}
+
+test('same filename with changed content cannot inherit notes', async () => {
+  const storage = memoryStorage();
+  const oldDoc = await createDocument('essay.txt', 'An old paragraph.');
+  oldDoc.notes[0] = { text: 'Keep this', source: await fingerprint('An old paragraph.') };
+  saveDocument(storage, oldDoc);
+  const changedDoc = await createDocument('essay.txt', 'A different paragraph.');
+  assert.notEqual(oldDoc.id, changedDoc.id);
+  assert.equal(loadDocument(storage, changedDoc.id), null);
+});
+
+test('malformed backup rejects before replacing current work', async () => {
+  await assert.rejects(parseBackup('{"version":2,"text":"hello","notes":{"0":{"text":"oops","source":"wrong"}}}'), /backup/i);
+  await assert.rejects(parseBackup('{bad json'), /backup/i);
+});
+
+test('backup round trip retains text, bookmark and anchored notes', async () => {
+  const doc = await createDocument('sample.md', 'A paragraph.\n\nAnother one.');
+  doc.index = 1;
+  doc.notes[1] = { text: 'Look again', source: await fingerprint('Another one.') };
+  const restored = await parseBackup(JSON.stringify({ version: 2, document: doc }));
+  assert.equal(restored.text, doc.text);
+  assert.equal(restored.index, 1);
+  assert.equal(restored.notes[1].text, 'Look again');
+});
