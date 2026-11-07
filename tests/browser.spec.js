@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { PDFDocument, StandardFonts } from 'pdf-lib';
 
 test('notes can be hidden, focused, and left without stealing typing', async ({ page }) => {
   await page.goto('/');
@@ -36,4 +37,52 @@ test('reading unit, appearance, and pane size are adjustable', async ({ page }) 
   await page.keyboard.press('ArrowLeft');
   const after = await page.locator('#app').evaluate(el => getComputedStyle(el).gridTemplateColumns);
   expect(after).not.toBe(before);
+});
+
+test('selected words play and return to their paragraph with notes', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel('Paste text').fill('Alpha beta gamma delta.\n\nAnother paragraph.');
+  await page.getByRole('button', { name: 'Start reading' }).click();
+  await page.locator('#chunk-text').evaluate(el => { const range = document.createRange(); range.setStart(el.firstChild, 0); range.setEnd(el.firstChild, 16); const selection = getSelection(); selection.removeAllRanges(); selection.addRange(range); });
+  await page.getByRole('button', { name: 'Read words' }).click();
+  await expect(page.getByRole('dialog', { name: 'Word reader' })).toBeVisible();
+  await page.getByLabel('Words per minute').fill('800');
+  await expect(page.getByRole('dialog', { name: 'Word reader' })).toBeHidden({ timeout: 5000 });
+  await expect(page.getByRole('heading', { name: 'Alpha beta gamma delta.' })).toBeVisible();
+  await expect(page.getByLabel('Note for current paragraph')).toBeVisible();
+});
+
+test('backup restores notes while malformed import leaves current work alone', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel('Paste text').fill('Keep this paragraph.');
+  await page.getByRole('button', { name: 'Start reading' }).click();
+  await page.getByLabel('Note for current paragraph').fill('Important note');
+  await page.getByRole('button', { name: 'Utilities' }).click();
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download backup' }).click();
+  const saved = await download;
+  await expect(page.getByRole('status').last()).toContainText('downloaded');
+  await page.getByLabel('Restore backup').setInputFiles({ name: 'bad.json', mimeType: 'application/json', buffer: Buffer.from('{bad') });
+  await expect(page.getByLabel('Note for current paragraph')).toHaveValue('Important note');
+  await page.getByRole('button', { name: 'New document' }).click();
+  await page.getByLabel('Paste text').fill('Different document.');
+  await page.getByRole('button', { name: 'Start reading' }).click();
+  await page.getByRole('button', { name: 'Utilities' }).click();
+  await page.getByLabel('Restore backup').setInputFiles(await saved.path());
+  await expect(page.getByRole('heading', { name: 'Keep this paragraph.' })).toBeVisible();
+  await expect(page.getByLabel('Note for current paragraph')).toHaveValue('Important note');
+});
+
+test('browser extracts text from a PDF and reports invalid PDFs', async ({ page }) => {
+  const pdf = await PDFDocument.create();
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+  pdf.addPage([400, 500]).drawText('PDF reading works.', { x: 50, y: 400, font, size: 18 });
+  const buffer = Buffer.from(await pdf.save());
+  await page.goto('/');
+  await page.locator('#file').setInputFiles({ name: 'sample.pdf', mimeType: 'application/pdf', buffer });
+  await expect(page.getByRole('heading', { name: 'PDF reading works.' })).toBeVisible({ timeout: 10000 });
+  await page.getByRole('button', { name: 'Utilities' }).click();
+  await page.getByRole('button', { name: 'New document' }).click();
+  await page.locator('#file').setInputFiles({ name: 'broken.pdf', mimeType: 'application/pdf', buffer: Buffer.from('not a pdf') });
+  await expect(page.locator('#setup-status')).toContainText('Could not open this PDF');
 });

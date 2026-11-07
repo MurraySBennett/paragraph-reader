@@ -1,5 +1,7 @@
 import { prepareText, splitParagraphs, makeChunks } from './content.js';
-import { createDocument, fingerprint, loadDocument, saveDocument } from './storage.js';
+import { createDocument, fingerprint, loadDocument, saveDocument, parseBackup } from './storage.js';
+import { WordPlayer } from './word-mode.js';
+import { readPdf } from './pdf.js';
 
 const $ = id => document.getElementById(id);
 const setup = $('setup'), shell = $('reader-shell'), card = $('paragraph'), note = $('note');
@@ -121,8 +123,13 @@ $('start').addEventListener('click', () => openDocument($('input').value));
 $('input').addEventListener('keydown', event => { if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) openDocument($('input').value); });
 $('file').addEventListener('change', async event => {
   const file = event.target.files?.[0]; if (!file) return;
-  if (/\.pdf$/i.test(file.name) || file.type === 'application/pdf') { $('setup-status').textContent = 'PDF support is loading…'; return; }
-  await openDocument(await file.text(), file.name); event.target.value = '';
+  try {
+    $('setup-status').textContent = 'Opening file…';
+    const text = /\.pdf$/i.test(file.name) || file.type === 'application/pdf' ? await readPdf(file) : await file.text();
+    await openDocument(text, file.name);
+    $('setup-status').textContent = '';
+  } catch (error) { $('setup-status').textContent = error.message || 'Could not open that file.'; }
+  event.target.value = '';
 });
 $('previous').addEventListener('click', () => move(-1));
 $('next').addEventListener('click', () => move(1));
@@ -146,6 +153,73 @@ $('utilities-open').addEventListener('click', () => { const open = $('utilities'
 $('new-document').addEventListener('click', () => { saveDoc(); shell.hidden = true; setup.hidden = false; $('utilities').hidden = true; $('input').focus(); });
 $('shortcut-help').addEventListener('click', () => { $('utilities').hidden = true; $('shortcuts').showModal(); });
 $('shortcuts-close').addEventListener('click', () => $('shortcuts').close());
+
+function download(name, text, type) {
+  try {
+    const url = URL.createObjectURL(new Blob([text], { type }));
+    const link = document.createElement('a'); link.href = url; link.download = name; link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+    status(`${name} downloaded`);
+  } catch { status('Download failed. Please try again.', true); }
+}
+function safeName() { return (doc?.name || 'reading').replace(/[^a-z0-9._-]+/gi, '_'); }
+$('export-backup').addEventListener('click', () => { if (!doc) return; saveDoc(); download(`${safeName()}.reader.json`, JSON.stringify({ version: 2, document: doc, preferences: prefs }, null, 2), 'application/json'); });
+$('export-notes').addEventListener('click', () => {
+  if (!doc) return;
+  const lines = [`# Notes: ${doc.name}`, '', `Bookmark: paragraph ${doc.index + 1} of ${paragraphs.length}`, ''];
+  for (const [key, value] of Object.entries(doc.notes).sort((a,b) => Number(a[0]) - Number(b[0]))) {
+    if (!value?.text?.trim()) continue;
+    lines.push(`## Paragraph ${Number(key) + 1}`, '', `> ${paragraphs[Number(key)]}`, '', value.text.trim(), '');
+  }
+  if (lines.length === 4) lines.push('_No notes yet._');
+  download(`${safeName()}.notes.md`, lines.join('\n'), 'text/markdown;charset=utf-8');
+});
+$('import-backup').addEventListener('change', async event => {
+  const file = event.target.files?.[0]; if (!file) return;
+  try {
+    const restored = await parseBackup(await file.text());
+    await openDocument(restored.document.text, restored.document.name);
+    doc = restored.document;
+    prefs = { ...defaults, ...restored.preferences };
+    applyPrefs(); savePrefs();
+    paragraphs = splitParagraphs(doc.text);
+    paragraphHashes = await Promise.all(paragraphs.map(fingerprint));
+    chunks = makeChunks(paragraphs, prefs.unit, prefs.pageWords);
+    chunkIndex = Math.max(0, chunks.findIndex(chunk => chunk.start <= doc.index && chunk.end >= doc.index));
+    render(); saveDoc(); $('utilities').hidden = true; status('Backup restored');
+  } catch (error) { status(error.message || 'Could not restore backup.', true); }
+  event.target.value = '';
+});
+
+const player = new WordPlayer({
+  onWord: (word, index, total) => { $('word-display').textContent = word; $('word-progress').textContent = `${index} / ${total}`; },
+  onFinish: finishWordMode,
+});
+function finishWordMode() {
+  player.stop(false);
+  $('word-mode').hidden = true;
+  $('word-play').textContent = 'Pause';
+  card.focus();
+}
+$('word-start').addEventListener('click', () => {
+  if (!doc) return;
+  const selected = getSelection()?.toString().trim();
+  const text = selected && card.contains(getSelection()?.anchorNode) ? selected : chunks[chunkIndex].text;
+  if (!text) return;
+  $('word-mode').hidden = false;
+  $('word-display').textContent = '';
+  $('word-play').textContent = 'Pause';
+  $('word-exit').focus();
+  player.setWpm($('word-speed').value);
+  player.start(text);
+});
+$('word-exit').addEventListener('click', finishWordMode);
+$('word-play').addEventListener('click', () => {
+  if (player.paused) { player.resume(); $('word-play').textContent = 'Pause'; }
+  else { player.pause(); $('word-play').textContent = 'Play'; }
+});
+$('word-speed').addEventListener('input', event => { player.setWpm(event.target.value); $('word-speed-value').textContent = `${player.wpm} WPM`; });
+$('word-mode').addEventListener('keydown', event => { if (event.key === 'Escape') { event.preventDefault(); finishWordMode(); } });
 
 function setNotesWidth(value) { prefs.notesWidth = Math.max(20, Math.min(65, value)); document.documentElement.style.setProperty('--notes-width', `${prefs.notesWidth}%`); $('pane-resizer').setAttribute('aria-valuenow', String(prefs.notesWidth)); savePrefs(); }
 function setEditorHeight(value) { prefs.editorHeight = Math.max(120, Math.min(600, value)); document.documentElement.style.setProperty('--editor-height', `${prefs.editorHeight}px`); $('note-resizer').setAttribute('aria-valuenow', String(prefs.editorHeight)); savePrefs(); }

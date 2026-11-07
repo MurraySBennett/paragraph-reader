@@ -40,5 +40,7 @@ export async function parseBackup(json) {
     const i = Number(key);
     if (!Number.isInteger(i) || i < 0 || i >= paragraphs.length || typeof note?.text !== 'string' || note.source !== await fingerprint(paragraphs[i])) throw new Error('Invalid paragraph reader backup.');
   }
-  return doc;
+  const preferences = data.preferences ?? {};
+  if (!preferences || typeof preferences !== 'object' || Array.isArray(preferences)) throw new Error('Invalid paragraph reader backup.');
+  return { document: doc, preferences };
 }

@@ -26,8 +26,9 @@ test('backup round trip retains text, bookmark and anchored notes', async () => 
   const doc = await createDocument('sample.md', 'A paragraph.\n\nAnother one.');
   doc.index = 1;
   doc.notes[1] = { text: 'Look again', source: await fingerprint('Another one.') };
-  const restored = await parseBackup(JSON.stringify({ version: 2, document: doc }));
-  assert.equal(restored.text, doc.text);
-  assert.equal(restored.index, 1);
-  assert.equal(restored.notes[1].text, 'Look again');
+  const restored = await parseBackup(JSON.stringify({ version: 2, document: doc, preferences: { theme: 'night', notes: false } }));
+  assert.equal(restored.document.text, doc.text);
+  assert.equal(restored.document.index, 1);
+  assert.equal(restored.document.notes[1].text, 'Look again');
+  assert.deepEqual(restored.preferences, { theme: 'night', notes: false });
 });
