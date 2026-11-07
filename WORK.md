@@ -5,9 +5,9 @@
 - Public reader goal delivered. Plan: `docs/superpowers/plans/2026-11-07-public-reader.md`.
 - Published at https://murraysbennett.github.io/paragraph-reader/; GitHub Pages workflow passed unit, CLI, browser, and build checks.
 - The terminal helper remains at `tools/paragraph-reader`; its cached HTML page accepts files locally and explains how to open another PDF through the helper.
-- Structured-passage design now includes local DOCX import and a legacy DOC conversion message; independent builder check found no important gaps. User approval is pending.
-- The six-example shortlist and two offline routes are specified in `docs/superpowers/specs/2026-11-07-examples-and-offline-access-design.md`; independent builder check found no consequential gaps. User approval of the written design is pending.
-- The Spanish story is drafted inside that spec. Source curation, license checks, sample packaging, and local-file PDF/DOCX verification belong to implementation after approval.
+- Both structured-passage/DOCX and examples/offline designs are approved together. Execution plan: `docs/superpowers/plans/2026-11-07-structured-import-examples-offline.md`.
+- The plan is drafted through the release gate and pending user review/explicit launch. No product implementation has begun.
+- The Spanish story is drafted inside the examples spec. Source curation, license checks, sample packaging, and local-file PDF/DOCX verification are implementation tasks.
 
 ## build
 
