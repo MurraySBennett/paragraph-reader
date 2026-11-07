@@ -74,3 +74,17 @@ test('local copy can export and restore a note backup', async ({ page }) => {
   await page.locator('#setup-import-backup').setInputFiles(await backup.path());
   await expect(page.getByLabel('Note for current paragraph')).toHaveValue('Remember this.');
 });
+
+test('downloaded copy opens word mode paused and waits for the next segment', async ({ page }) => {
+  await page.goto(localUrl);
+  await page.getByLabel('Paste text').fill('Alpha. Beta.');
+  await page.getByRole('button', { name: 'Start reading' }).click();
+  await page.getByRole('button', { name: 'Read words' }).click();
+  await expect(page.getByRole('button', { name: 'Start', exact: true })).toBeVisible();
+  await expect(page.locator('#word-display')).toBeEmpty();
+  await page.getByLabel('Words per minute').fill('800');
+  await page.getByRole('button', { name: 'Start', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Next segment' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Next segment' }).click();
+  await expect(page.locator('#word-progress')).toContainText('Segment 2 of 2');
+});

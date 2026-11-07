@@ -2,7 +2,7 @@
 
 ## Now
 
-- Word-reader pacing goal launched in `feat/word-reader-pacing`; plan: `docs/superpowers/plans/2026-11-07-word-reader-pacing.md`. Baseline Node tests: 27 pass. Implement queue, dialog, and local-copy checks next.
+- Word-reader pacing goal in `feat/word-reader-pacing`; plan: `docs/superpowers/plans/2026-11-07-word-reader-pacing.md`. Player, dialog, keyboard, and selection checks pass locally; package and release checks next.
 - Structured passages, DOCX import, reader fonts, six credited examples, offline install, and a downloadable ZIP are published at https://murraysbennett.github.io/paragraph-reader/.
 - Execution plan: `docs/superpowers/plans/2026-11-07-structured-import-examples-offline.md`; all seven milestones complete.
 - GitHub Pages run 42342318569 passed unit, Python CLI, hosted Chromium, Linux/macOS/Windows extracted-ZIP smoke, and deployment checks; live site, manifest, service worker, sample, and ZIP returned HTTP 200.
