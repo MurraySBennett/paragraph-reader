@@ -9,7 +9,7 @@
 
 ## build
 
-- [ ] next — Design import normalization and re-import matching across document types, preserve supported inline formatting, and add reader font families, including a dyslexia-oriented option.
+- [ ] next — Design supported inline formatting across document types and reader font families, including a dyslexia-oriented option; leave preamble grouping unchanged unless requested again.
 - [x] 2026-11-07 — Implement the public reader design, verify it, and publish the static release.
 - [x] 2026-11-07 — Add paragraph/sentence/page chunking and content-fingerprint storage with backup validation.
 - [x] 2026-11-07 — Add top bar, optional resizable notes, keyboard focus, themes, and typography controls.
