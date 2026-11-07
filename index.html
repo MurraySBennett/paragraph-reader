@@ -40,6 +40,7 @@
     <div id="utilities" class="utilities" hidden>
       <button id="export-notes" type="button">Download notes</button>
       <button id="export-backup" type="button">Download backup</button>
+      <button id="earlier-notes" type="button" hidden>Earlier notes</button>
       <label class="button file-button">Restore backup<input id="import-backup" type="file" accept=".json,application/json"></label>
       <button id="new-document" type="button">New document</button>
       <button id="shortcut-help" type="button">Keyboard shortcuts</button>
@@ -74,12 +75,16 @@
       <div id="custom-colors" hidden><label>Background <input id="custom-bg" type="color" value="#f8f5ef"></label><label>Text <input id="custom-text" type="color" value="#202327"></label><label>Accent <input id="custom-accent" type="color" value="#345f68"></label></div>
     </div>
     <div id="typography-panel" role="tabpanel" aria-labelledby="typography-tab" hidden>
+      <label>Reader font <select id="font-family" aria-label="Reader font"><option value="serif-classic">Classic serif</option><option value="serif-literary">Literary serif</option><option value="sans-system">System sans</option><option value="sans-humanist">Humanist sans</option><option value="opendyslexic">OpenDyslexic</option></select></label>
+      <p id="font-preview" class="font-preview" aria-label="Font preview">A paragraph to preview.</p>
       <label>Font size <input id="font-size" aria-label="Font size" type="range" min="16" max="32" value="20"><output id="font-size-value">20 px</output></label>
       <label>Line spacing <input id="line-height" type="range" min="1.3" max="2.2" step="0.1" value="1.7"><output id="line-height-value">1.7</output></label>
       <label>Text width <input id="text-width" type="range" min="35" max="85" value="64"><output id="text-width-value">64 ch</output></label>
       <label>Page length <input id="page-words" type="number" min="50" max="1000" step="25" value="250"> words</label>
     </div>
   </dialog>
+
+  <dialog id="earlier-notes-dialog" aria-labelledby="earlier-notes-title"><div class="dialog-head"><h2 id="earlier-notes-title">Earlier notes</h2><button id="earlier-notes-close" type="button" aria-label="Close earlier notes">×</button></div><p>These notes belong to an earlier version of this file. Download a backup before changing or clearing browser data.</p><div id="earlier-notes-list"></div></dialog>
 
   <dialog id="shortcuts" aria-labelledby="shortcuts-title"><div class="dialog-head"><h2 id="shortcuts-title">Keyboard shortcuts</h2><button id="shortcuts-close" type="button" aria-label="Close keyboard shortcuts">×</button></div><p><kbd>←</kbd> and <kbd>→</kbd> move between chunks. <kbd>N</kbd> focuses notes. <kbd>Esc</kbd> returns to reading. Shortcuts pause while you type in a field.</p></dialog>
 

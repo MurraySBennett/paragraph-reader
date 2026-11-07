@@ -1,2 +1,3 @@
 dist/paragraph-reader.html whitespace=-trailing-space
 vendor/*-LICENSE whitespace=-trailing-space
+vendor/*-OFL.txt whitespace=-trailing-space

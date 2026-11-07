@@ -1,4 +1,5 @@
 import { splitParagraphs } from './content.js';
+import { validatePassages } from './passages.js';
 
 const KEY = 'paragraph-reader:v2:';
 const preferenceRules = {
@@ -15,6 +16,7 @@ const preferenceRules = {
   customBg: value => /^#[0-9a-f]{6}$/i.test(value),
   customText: value => /^#[0-9a-f]{6}$/i.test(value),
   customAccent: value => /^#[0-9a-f]{6}$/i.test(value),
+  fontFamily: value => ['serif-classic', 'serif-literary', 'sans-system', 'sans-humanist', 'opendyslexic'].includes(value),
 };
 
 export function validPreferences(value) {
@@ -28,10 +30,11 @@ export async function fingerprint(text) {
   return [...new Uint8Array(hash)].map(byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
-export async function createDocument(name, text) {
-  const paragraphs = splitParagraphs(text);
+export async function createDocument(name, text, blocks = null) {
+  const paragraphs = blocks ? blocks.map(block => block.text) : splitParagraphs(text);
   if (!paragraphs.length) throw new Error('No readable text found.');
-  return { version: 2, id: await fingerprint(text), name: String(name || 'Pasted text'), text: String(text), index: 0, notes: {}, updated: new Date().toISOString() };
+  if (blocks && (!validatePassages(blocks) || blocks.map(block => block.text).join('\n\n') !== text)) throw new Error('Invalid document structure.');
+  return { version: blocks ? 3 : 2, id: await fingerprint(text), name: String(name || 'Pasted text'), text: String(text), ...(blocks ? { blocks } : {}), index: 0, notes: {}, updated: new Date().toISOString() };
 }
 
 export function saveDocument(storage, doc) {
@@ -43,7 +46,7 @@ export function loadDocument(storage, id) {
   if (!raw) return null;
   try {
     const doc = JSON.parse(raw);
-    return doc?.version === 2 && doc.id === id ? doc : null;
+    return (doc?.version === 2 || (doc?.version === 3 && validatePassages(doc.blocks) && doc.blocks.map(block => block.text).join('\n\n') === doc.text)) && doc.id === id ? doc : null;
   } catch { return null; }
 }
 
@@ -51,10 +54,11 @@ export async function parseBackup(json) {
   let data;
   try { data = JSON.parse(json); } catch { throw new Error('Invalid backup JSON.'); }
   const doc = data?.document;
-  if (data?.version !== 2 || !doc || doc.version !== 2 || typeof doc.text !== 'string' || typeof doc.name !== 'string' || !doc.notes || typeof doc.notes !== 'object' || Array.isArray(doc.notes) || !Number.isInteger(doc.index)) {
+  if (![2, 3].includes(data?.version) || !doc || doc.version !== data.version || typeof doc.text !== 'string' || typeof doc.name !== 'string' || !doc.notes || typeof doc.notes !== 'object' || Array.isArray(doc.notes) || !Number.isInteger(doc.index)) {
     throw new Error('Invalid paragraph reader backup.');
   }
-  const paragraphs = splitParagraphs(doc.text);
+  if (doc.version === 3 && (!validatePassages(doc.blocks) || doc.blocks.map(block => block.text).join('\n\n') !== doc.text)) throw new Error('Invalid paragraph reader backup.');
+  const paragraphs = doc.version === 3 ? doc.blocks.map(block => block.text) : splitParagraphs(doc.text);
   if (!paragraphs.length || doc.id !== await fingerprint(doc.text) || doc.index < 0 || doc.index >= paragraphs.length) throw new Error('Invalid paragraph reader backup.');
   for (const [key, note] of Object.entries(doc.notes)) {
     const i = Number(key);
@@ -63,4 +67,17 @@ export async function parseBackup(json) {
   const preferences = data.preferences ?? {};
   if (!validPreferences(preferences)) throw new Error('Invalid paragraph reader backup.');
   return { document: doc, preferences };
+}
+
+export function findRecoverableDocuments(storage, name, currentId) {
+  const found = [];
+  for (let i = 0; i < storage.length; i++) {
+    const key = storage.key(i);
+    if (!key?.startsWith(KEY)) continue;
+    const id = key.slice(KEY.length);
+    if (id === currentId) continue;
+    const doc = loadDocument(storage, id);
+    if (doc?.name === name && Object.values(doc.notes || {}).some(note => typeof note?.text === 'string' && note.text.trim())) found.push(doc);
+  }
+  return found.sort((a, b) => String(b.updated || '').localeCompare(String(a.updated || '')));
 }

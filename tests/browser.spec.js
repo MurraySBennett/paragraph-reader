@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { PDFDocument, StandardFonts } from 'pdf-lib';
 import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
 
 test('notes can be hidden, focused, and left without stealing typing', async ({ page }) => {
@@ -196,4 +197,52 @@ test('word reader keeps keyboard focus inside its dialog', async ({ page }) => {
   expect(await page.evaluate(() => document.activeElement.closest('#word-mode') !== null)).toBe(true);
   await page.getByRole('button', { name: 'Back to reading' }).click();
   await expect(page.getByLabel('Reader text')).toBeFocused();
+});
+
+test('reader font selection persists and applies to word mode', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel('Paste text').fill('Readable text.');
+  await page.getByRole('button', { name: 'Start reading' }).click();
+  await page.getByRole('button', { name: 'Appearance' }).click();
+  await page.getByRole('tab', { name: 'Typography' }).click();
+  await expect(page.locator('#font-preview')).toContainText('Readable text.');
+  await page.getByLabel('Reader font').selectOption('sans-system');
+  await expect(page.locator('#chunk-text')).toHaveCSS('font-family', /system-ui/);
+  await page.getByRole('button', { name: 'Close appearance' }).click();
+  await page.getByRole('button', { name: 'Read words' }).click();
+  await expect(page.locator('#word-display')).toHaveCSS('font-family', /system-ui/);
+  await page.reload();
+  await page.getByLabel('Paste text').fill('Readable text.');
+  await page.getByRole('button', { name: 'Start reading' }).click();
+  await page.getByRole('button', { name: 'Appearance' }).click();
+  await page.getByRole('tab', { name: 'Typography' }).click();
+  await expect(page.getByLabel('Reader font')).toHaveValue('sans-system');
+});
+
+test('changed same-name import offers earlier notes as a backup', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#file').setInputFiles({ name: 'same.md', mimeType: 'text/markdown', buffer: Buffer.from('Old paragraph.') });
+  await page.getByLabel('Note for current paragraph').fill('Earlier note');
+  await page.getByRole('button', { name: 'Utilities' }).click();
+  await page.getByRole('button', { name: 'New document' }).click();
+  await page.locator('#file').setInputFiles({ name: 'same.md', mimeType: 'text/markdown', buffer: Buffer.from('Changed paragraph.') });
+  await expect(page.getByLabel('Note for current paragraph')).toHaveValue('');
+  await page.getByRole('button', { name: 'Utilities' }).click();
+  await page.getByRole('button', { name: 'Earlier notes' }).click();
+  const downloaded = page.waitForEvent('download');
+  await page.getByRole('button', { name: /Download earlier notes/ }).click();
+  const file = await downloaded;
+  expect(file.suggestedFilename()).toMatch(/\.reader\.json$/);
+});
+
+test('formatted Markdown backup stores validated passages', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#file').setInputFiles({ name: 'marked.md', mimeType: 'text/markdown', buffer: Buffer.from('# Heading\n\nA **bold** result.') });
+  await page.getByRole('button', { name: 'Utilities' }).click();
+  const pending = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download backup' }).click();
+  const backup = JSON.parse(readFileSync(await (await pending).path(), 'utf8'));
+  expect(backup.version).toBe(3);
+  expect(backup.document.blocks.map(block => block.kind)).toEqual(['heading', 'paragraph']);
+  expect(backup.document.blocks[1].runs.some(run => run.bold)).toBe(true);
 });

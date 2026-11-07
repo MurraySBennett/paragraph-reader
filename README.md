@@ -28,9 +28,9 @@ It uses `pdftotext` for PDFs and opens a self-contained HTML page cached by docu
 
 - `N` focuses notes; `Escape` returns to the reader. Arrow keys, Space, Page Up/Down, `J`, and `K` navigate when the focus is outside text fields.
 - Notes are optional. Drag the panel dividers or use arrow keys on the focused separator; Home resets a separator.
-- Appearance has separate Themes and Typography tabs. Themes include neutral light, dark, warm, high-contrast, and custom palettes; typography controls font size, line spacing, text width, and page length.
+- Appearance has separate Themes and Typography tabs. Themes include neutral light, dark, warm, high-contrast, and custom palettes; typography controls reader font, font size, line spacing, text width, and page length. The font menu includes serif and sans choices plus OpenDyslexic as a personal preference, without a claim of universal benefit.
 - The word reader plays the selected text in the current chunk, or the whole chunk if nothing is selected. Speed ranges from 100 to 800 WPM. It returns to the source chunk when finished.
-- Documents and notes are stored in browser storage under a hash of the document content. Editing the source creates a new identity, so old notes cannot silently move to different text. A JSON backup includes source text, notes, bookmark, and appearance settings; Markdown export contains notes with source quotations. Browser storage is local to the browser and site origin, so download a backup before clearing browser data or moving devices.
+- Documents and notes are stored in browser storage under a hash of the document content. Editing the source creates a new identity, so old notes cannot silently move to different text. The Utilities menu offers earlier notes as a backup when a same-name file changes. A JSON backup includes source text, notes, bookmark, formatting where available, and appearance settings; Markdown export contains notes with source quotations. Browser storage is local to the browser and site origin, so download a backup before clearing browser data or moving devices.
 
 ## Development
 
@@ -43,4 +43,4 @@ npx playwright test
 
 On NixOS, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE` to a working Chromium wrapper path when running browser tests. `npm run build` makes `dist/index.html` for static hosting and `dist/paragraph-reader.html` for the CLI.
 
-PDF.js is distributed under the Apache License 2.0; its license is included at `vendor/LICENSE`. The direct Markdown and DOCX parser licenses are at `vendor/MARKDOWN-IT-LICENSE`, `vendor/MAMMOTH-LICENSE`, and `vendor/PARSE5-LICENSE`; all are copied into the hosted release.
+PDF.js is distributed under the Apache License 2.0; its license is included at `vendor/LICENSE`. The direct Markdown and DOCX parser licenses are at `vendor/MARKDOWN-IT-LICENSE`, `vendor/MAMMOTH-LICENSE`, and `vendor/PARSE5-LICENSE`. OpenDyslexic is under SIL OFL at `vendor/OPENDYSLEXIC-OFL.txt`. These files are copied into the hosted release.

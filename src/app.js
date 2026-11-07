@@ -1,5 +1,5 @@
 import { prepareText, splitParagraphs, makeChunks } from './content.js';
-import { createDocument, fingerprint, loadDocument, saveDocument, parseBackup, validPreferences } from './storage.js';
+import { createDocument, fingerprint, loadDocument, saveDocument, parseBackup, validPreferences, findRecoverableDocuments } from './storage.js';
 import { WordPlayer } from './word-mode.js';
 import { readPdf } from './pdf.js';
 import { importFile } from './import-file.js';
@@ -7,9 +7,10 @@ import { parseTex } from './tex.js';
 
 const $ = id => document.getElementById(id);
 const setup = $('setup'), shell = $('reader-shell'), card = $('paragraph'), note = $('note');
-let doc = null, paragraphs = [], paragraphHashes = [], chunks = [], chunkIndex = 0, noteAnchor = null, wordSourceAnchor = null, saveTimer = 0, toastTimer = 0;
+let doc = null, paragraphs = [], paragraphHashes = [], chunks = [], chunkIndex = 0, noteAnchor = null, wordSourceAnchor = null, saveTimer = 0, toastTimer = 0, recoveryDocs = [];
 const PREF_KEY = 'paragraph-reader:preferences:v2';
-const defaults = { unit: 'paragraph', notes: true, theme: 'system', fontSize: 20, lineHeight: 1.7, textWidth: 64, pageWords: 250, wordWpm: 300, notesWidth: 34, editorHeight: 240, customBg: '#f8f5ef', customText: '#202327', customAccent: '#345f68' };
+const defaults = { unit: 'paragraph', notes: true, theme: 'system', fontFamily: 'serif-classic', fontSize: 20, lineHeight: 1.7, textWidth: 64, pageWords: 250, wordWpm: 300, notesWidth: 34, editorHeight: 240, customBg: '#f8f5ef', customText: '#202327', customAccent: '#345f68' };
+const fontStacks = { 'serif-classic': 'Iowan Old Style, Palatino Linotype, Palatino, Georgia, serif', 'serif-literary': 'Georgia, Cambria, Times New Roman, serif', 'sans-system': 'system-ui, -apple-system, Segoe UI, sans-serif', 'sans-humanist': 'Trebuchet MS, Gill Sans, Segoe UI, sans-serif', opendyslexic: 'OpenDyslexic, system-ui, sans-serif' };
 let prefs = { ...defaults };
 try { const saved = JSON.parse(localStorage.getItem(PREF_KEY) || '{}'); if (validPreferences(saved)) prefs = { ...defaults, ...saved }; } catch {}
 
@@ -27,11 +28,13 @@ function savePrefs() { try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs
 function applyPrefs() {
   document.body.dataset.theme = prefs.theme;
   document.documentElement.style.setProperty('--font-size', `${prefs.fontSize}px`);
+  document.documentElement.style.setProperty('--reader-font', fontStacks[prefs.fontFamily] || fontStacks['serif-classic']);
   document.documentElement.style.setProperty('--line-height', String(prefs.lineHeight));
   document.documentElement.style.setProperty('--text-width', `${prefs.textWidth}ch`);
   document.documentElement.style.setProperty('--notes-width', `${prefs.notesWidth}%`);
   document.documentElement.style.setProperty('--editor-height', `${prefs.editorHeight}px`);
-  for (const [id, value] of [['unit', prefs.unit], ['theme', prefs.theme], ['font-size', prefs.fontSize], ['line-height', prefs.lineHeight], ['text-width', prefs.textWidth], ['page-words', prefs.pageWords], ['custom-bg', prefs.customBg], ['custom-text', prefs.customText], ['custom-accent', prefs.customAccent]]) $(id).value = value;
+  for (const [id, value] of [['unit', prefs.unit], ['theme', prefs.theme], ['font-family', prefs.fontFamily], ['font-size', prefs.fontSize], ['line-height', prefs.lineHeight], ['text-width', prefs.textWidth], ['page-words', prefs.pageWords], ['custom-bg', prefs.customBg], ['custom-text', prefs.customText], ['custom-accent', prefs.customAccent]]) $(id).value = value;
+  $('font-preview').textContent = doc?.text.slice(0, 100) || 'A paragraph to preview.';
   $('font-size-value').textContent = `${prefs.fontSize} px`;
   $('line-height-value').textContent = String(prefs.lineHeight);
   $('text-width-value').textContent = `${prefs.textWidth} ch`;
@@ -106,13 +109,15 @@ function setUnit(unit) {
   savePrefs(); render();
 }
 
-async function openDocument(text, name = 'Pasted text', preparedAlready = false) {
+async function openDocument(text, name = 'Pasted text', preparedAlready = false, blocks = null) {
   const prepared = preparedAlready ? text : prepareText(text, name);
   try {
-    const nextDoc = await createDocument(name, prepared);
+    const nextDoc = await createDocument(name, prepared, blocks);
     const saved = loadDocument(localStorage, nextDoc.id);
-    doc = saved && saved.text === nextDoc.text ? saved : nextDoc;
-    paragraphs = splitParagraphs(doc.text);
+    doc = saved && saved.text === nextDoc.text ? (blocks && saved.version === 2 ? { ...saved, version: 3, blocks } : saved) : nextDoc;
+    paragraphs = doc.version === 3 ? doc.blocks.map(block => block.text) : splitParagraphs(doc.text);
+    recoveryDocs = findRecoverableDocuments(localStorage, doc.name, doc.id);
+    $('earlier-notes').hidden = recoveryDocs.length === 0;
     noteAnchor = null;
     paragraphHashes = await Promise.all(paragraphs.map(fingerprint));
     // Drop notes whose source text changed in a malformed or old saved record.
@@ -128,7 +133,7 @@ async function openImportedFile(file) {
   const pdf = /\.pdf$/i.test(file.name) || file.type === 'application/pdf';
   if (pdf && $('boot-text').dataset.cli === 'true') throw new Error('To open a PDF from a local reader page, run paragraph-reader <file.pdf> in the terminal.');
   const parsed = await importFile(file);
-  return openDocument(parsed.text, parsed.name, true);
+  return openDocument(parsed.text, parsed.name, true, parsed.blocks);
 }
 
 function move(delta) { if (!doc) return; const target = Math.max(0, Math.min(chunks.length - 1, chunkIndex + delta)); if (target !== chunkIndex) { chunkIndex = target; noteAnchor = null; render(); } }
@@ -156,7 +161,7 @@ note.addEventListener('input', () => {
 });
 function renderNoteIndexWithoutInput() { const start = note.selectionStart, end = note.selectionEnd; renderNotes(); note.focus(); note.setSelectionRange(start, end); }
 
-$('appearance-open').addEventListener('click', () => $('appearance').showModal());
+$('appearance-open').addEventListener('click', () => { $('font-preview').textContent = chunks[chunkIndex]?.text.slice(0, 100) || 'A paragraph to preview.'; $('appearance').showModal(); });
 $('appearance-close').addEventListener('click', () => $('appearance').close());
 function showAppearanceTab(name) {
   for (const section of ['themes', 'typography']) {
@@ -173,10 +178,23 @@ for (const section of ['themes', 'typography']) {
     if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); showAppearanceTab(section === 'themes' ? 'typography' : 'themes'); }
   });
 }
-for (const [id, key, cast] of [['theme', 'theme', String], ['font-size', 'fontSize', Number], ['line-height', 'lineHeight', Number], ['text-width', 'textWidth', Number], ['page-words', 'pageWords', Number], ['custom-bg', 'customBg', String], ['custom-text', 'customText', String], ['custom-accent', 'customAccent', String]]) {
+for (const [id, key, cast] of [['theme', 'theme', String], ['font-family', 'fontFamily', String], ['font-size', 'fontSize', Number], ['line-height', 'lineHeight', Number], ['text-width', 'textWidth', Number], ['page-words', 'pageWords', Number], ['custom-bg', 'customBg', String], ['custom-text', 'customText', String], ['custom-accent', 'customAccent', String]]) {
   $(id).addEventListener('input', event => { prefs[key] = cast(event.target.value); applyPrefs(); savePrefs(); if (id === 'page-words' && doc && prefs.unit === 'page') setUnit('page'); });
 }
 $('utilities-open').addEventListener('click', () => { const open = $('utilities').hidden; $('utilities').hidden = !open; $('utilities-open').setAttribute('aria-expanded', String(open)); });
+$('earlier-notes').addEventListener('click', () => {
+  const list = $('earlier-notes-list');
+  list.replaceChildren();
+  recoveryDocs.forEach((earlier, index) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = `Download earlier notes ${index + 1} (${Object.keys(earlier.notes).length} notes)`;
+    button.addEventListener('click', () => download(`${safeName()}.earlier-${earlier.id.slice(0, 8)}.reader.json`, JSON.stringify({ version: earlier.version, document: earlier, preferences: prefs }, null, 2), 'application/json'));
+    list.append(button);
+  });
+  $('earlier-notes-dialog').showModal();
+});
+$('earlier-notes-close').addEventListener('click', () => $('earlier-notes-dialog').close());
 $('new-document').addEventListener('click', () => { saveDoc(); shell.hidden = true; setup.hidden = false; $('utilities').hidden = true; $('input').focus(); });
 $('shortcut-help').addEventListener('click', () => { $('utilities').hidden = true; $('shortcuts').showModal(); });
 $('shortcuts-close').addEventListener('click', () => $('shortcuts').close());
@@ -190,7 +208,7 @@ function download(name, text, type) {
   } catch { status('Download failed. Please try again.', true); }
 }
 function safeName() { return (doc?.name || 'reading').replace(/[^a-z0-9._-]+/gi, '_'); }
-$('export-backup').addEventListener('click', () => { if (!doc) return; saveDoc(); download(`${safeName()}.reader.json`, JSON.stringify({ version: 2, document: doc, preferences: prefs }, null, 2), 'application/json'); });
+$('export-backup').addEventListener('click', () => { if (!doc) return; saveDoc(); download(`${safeName()}.reader.json`, JSON.stringify({ version: doc.version, document: doc, preferences: prefs }, null, 2), 'application/json'); });
 $('export-notes').addEventListener('click', () => {
   if (!doc) return;
   const lines = [`# Notes: ${doc.name}`, '', `Bookmark: paragraph ${doc.index + 1} of ${paragraphs.length}`, ''];
@@ -205,11 +223,11 @@ async function restoreBackup(event) {
   const file = event.target.files?.[0]; if (!file) return;
   try {
     const restored = await parseBackup(await file.text());
-    await openDocument(restored.document.text, restored.document.name);
+    await openDocument(restored.document.text, restored.document.name, true, restored.document.blocks || null);
     doc = restored.document;
     prefs = { ...defaults, ...restored.preferences };
     applyPrefs(); savePrefs();
-    paragraphs = splitParagraphs(doc.text);
+    paragraphs = doc.version === 3 ? doc.blocks.map(block => block.text) : splitParagraphs(doc.text);
     noteAnchor = null;
     paragraphHashes = await Promise.all(paragraphs.map(fingerprint));
     chunks = makeChunks(paragraphs, prefs.unit, prefs.pageWords);
