@@ -5,9 +5,9 @@ import { readPdf } from './pdf.js';
 
 const $ = id => document.getElementById(id);
 const setup = $('setup'), shell = $('reader-shell'), card = $('paragraph'), note = $('note');
-let doc = null, paragraphs = [], paragraphHashes = [], chunks = [], chunkIndex = 0, saveTimer = 0, toastTimer = 0;
+let doc = null, paragraphs = [], paragraphHashes = [], chunks = [], chunkIndex = 0, noteAnchor = null, wordSourceAnchor = null, saveTimer = 0, toastTimer = 0;
 const PREF_KEY = 'paragraph-reader:preferences:v2';
-const defaults = { unit: 'paragraph', notes: true, theme: 'system', fontSize: 20, lineHeight: 1.7, textWidth: 64, pageWords: 250, notesWidth: 34, editorHeight: 240, customBg: '#f8f5ef', customText: '#202327', customAccent: '#345f68' };
+const defaults = { unit: 'paragraph', notes: true, theme: 'system', fontSize: 20, lineHeight: 1.7, textWidth: 64, pageWords: 250, wordWpm: 300, notesWidth: 34, editorHeight: 240, customBg: '#f8f5ef', customText: '#202327', customAccent: '#345f68' };
 let prefs = { ...defaults };
 try { prefs = { ...defaults, ...JSON.parse(localStorage.getItem(PREF_KEY) || '{}') }; } catch {}
 
@@ -34,6 +34,8 @@ function applyPrefs() {
   $('line-height-value').textContent = String(prefs.lineHeight);
   $('text-width-value').textContent = `${prefs.textWidth} ch`;
   $('custom-colors').hidden = prefs.theme !== 'custom';
+  $('word-speed').value = prefs.wordWpm;
+  $('word-speed-value').textContent = `${prefs.wordWpm} WPM`;
   for (const [prop, value] of [['--bg', prefs.customBg], ['--surface', prefs.customBg], ['--panel', prefs.customBg], ['--fg', prefs.customText], ['--accent', prefs.customAccent]]) document.body.style.setProperty(prop, prefs.theme === 'custom' ? value : '');
   document.body.style.setProperty('--accent-text', prefs.theme === 'custom' ? '#fff' : '');
   setNotesVisible(prefs.notes, false);
@@ -59,7 +61,7 @@ function saveDoc() {
 }
 
 function renderNotes() {
-  const current = chunks[chunkIndex]?.start ?? 0;
+  const current = noteAnchor ?? chunks[chunkIndex]?.start ?? 0;
   note.value = doc.notes[current]?.text || '';
   $('note-title').textContent = `Paragraph ${current + 1}`;
   const list = $('note-index');
@@ -72,7 +74,7 @@ function renderNotes() {
     button.textContent = `¶ ${Number(key) + 1} · ${value.text.slice(0, 100)}`;
     button.addEventListener('click', () => {
       const found = chunks.findIndex(chunk => chunk.start <= Number(key) && chunk.end >= Number(key));
-      chunkIndex = Math.max(0, found); render(); note.focus();
+      chunkIndex = Math.max(0, found); noteAnchor = Number(key); render(); note.focus();
     });
     list.append(button);
   }
@@ -94,6 +96,7 @@ function render() {
 
 function setUnit(unit) {
   const current = chunks[chunkIndex]?.start ?? doc?.index ?? 0;
+  noteAnchor = null;
   prefs.unit = ['paragraph', 'sentence', 'page'].includes(unit) ? unit : 'paragraph';
   chunks = makeChunks(paragraphs, prefs.unit, prefs.pageWords);
   chunkIndex = Math.max(0, chunks.findIndex(chunk => chunk.start <= current && chunk.end >= current));
@@ -107,6 +110,7 @@ async function openDocument(text, name = 'Pasted text') {
     const saved = loadDocument(localStorage, nextDoc.id);
     doc = saved && saved.text === nextDoc.text ? saved : nextDoc;
     paragraphs = splitParagraphs(doc.text);
+    noteAnchor = null;
     paragraphHashes = await Promise.all(paragraphs.map(fingerprint));
     // Drop notes whose source text changed in a malformed or old saved record.
     for (const [key, value] of Object.entries(doc.notes)) if (paragraphHashes[Number(key)] !== value?.source) delete doc.notes[key];
@@ -117,7 +121,7 @@ async function openDocument(text, name = 'Pasted text') {
   } catch (error) { $('setup-status').textContent = error.message || 'Could not read this document.'; }
 }
 
-function move(delta) { if (!doc) return; const target = Math.max(0, Math.min(chunks.length - 1, chunkIndex + delta)); if (target !== chunkIndex) { chunkIndex = target; render(); } }
+function move(delta) { if (!doc) return; const target = Math.max(0, Math.min(chunks.length - 1, chunkIndex + delta)); if (target !== chunkIndex) { chunkIndex = target; noteAnchor = null; render(); } }
 
 $('start').addEventListener('click', () => openDocument($('input').value));
 $('input').addEventListener('keydown', event => { if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) openDocument($('input').value); });
@@ -137,7 +141,7 @@ $('read-focus').addEventListener('click', () => card.focus());
 $('notes-toggle').addEventListener('click', () => setNotesVisible(!prefs.notes));
 $('unit').addEventListener('change', event => setUnit(event.target.value));
 note.addEventListener('input', () => {
-  const i = chunks[chunkIndex].start;
+  const i = noteAnchor ?? chunks[chunkIndex].start;
   if (note.value.trim()) doc.notes[i] = { text: note.value, source: paragraphHashes[i] };
   else delete doc.notes[i];
   renderNoteIndexWithoutInput(); saveDocSoon();
@@ -146,6 +150,21 @@ function renderNoteIndexWithoutInput() { const start = note.selectionStart, end 
 
 $('appearance-open').addEventListener('click', () => $('appearance').showModal());
 $('appearance-close').addEventListener('click', () => $('appearance').close());
+function showAppearanceTab(name) {
+  for (const section of ['themes', 'typography']) {
+    const active = section === name;
+    $(`${section}-panel`).hidden = !active;
+    $(`${section}-tab`).setAttribute('aria-selected', String(active));
+    $(`${section}-tab`).tabIndex = active ? 0 : -1;
+  }
+  $(`${name}-tab`).focus();
+}
+for (const section of ['themes', 'typography']) {
+  $(`${section}-tab`).addEventListener('click', () => showAppearanceTab(section));
+  $(`${section}-tab`).addEventListener('keydown', event => {
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); showAppearanceTab(section === 'themes' ? 'typography' : 'themes'); }
+  });
+}
 for (const [id, key, cast] of [['theme', 'theme', String], ['font-size', 'fontSize', Number], ['line-height', 'lineHeight', Number], ['text-width', 'textWidth', Number], ['page-words', 'pageWords', Number], ['custom-bg', 'customBg', String], ['custom-text', 'customText', String], ['custom-accent', 'customAccent', String]]) {
   $(id).addEventListener('input', event => { prefs[key] = cast(event.target.value); applyPrefs(); savePrefs(); if (id === 'page-words' && doc && prefs.unit === 'page') setUnit('page'); });
 }
@@ -183,6 +202,7 @@ $('import-backup').addEventListener('change', async event => {
     prefs = { ...defaults, ...restored.preferences };
     applyPrefs(); savePrefs();
     paragraphs = splitParagraphs(doc.text);
+    noteAnchor = null;
     paragraphHashes = await Promise.all(paragraphs.map(fingerprint));
     chunks = makeChunks(paragraphs, prefs.unit, prefs.pageWords);
     chunkIndex = Math.max(0, chunks.findIndex(chunk => chunk.start <= doc.index && chunk.end >= doc.index));
@@ -199,12 +219,29 @@ function finishWordMode() {
   player.stop(false);
   $('word-mode').hidden = true;
   $('word-play').textContent = 'Pause';
+  noteAnchor = wordSourceAnchor;
+  renderNotes();
   card.focus();
 }
 $('word-start').addEventListener('click', () => {
   if (!doc) return;
-  const selected = getSelection()?.toString().trim();
-  const text = selected && card.contains(getSelection()?.anchorNode) ? selected : chunks[chunkIndex].text;
+  const selection = getSelection();
+  const selected = selection?.toString().trim();
+  const inCard = selected && card.contains(selection.anchorNode);
+  const text = inCard ? selected : chunks[chunkIndex].text;
+  wordSourceAnchor = chunks[chunkIndex].start;
+  if (inCard && prefs.unit === 'page') {
+    const range = selection.getRangeAt(0).cloneRange();
+    const prefix = range.cloneRange();
+    prefix.selectNodeContents($('chunk-text'));
+    prefix.setEnd(range.startContainer, range.startOffset);
+    const offset = prefix.toString().length;
+    let position = 0;
+    for (let i = chunks[chunkIndex].start; i <= chunks[chunkIndex].end; i++) {
+      if (offset < position + paragraphs[i].length + 2 || i === chunks[chunkIndex].end) { wordSourceAnchor = i; break; }
+      position += paragraphs[i].length + 2;
+    }
+  }
   if (!text) return;
   $('word-mode').hidden = false;
   $('word-display').textContent = '';
@@ -218,7 +255,7 @@ $('word-play').addEventListener('click', () => {
   if (player.paused) { player.resume(); $('word-play').textContent = 'Pause'; }
   else { player.pause(); $('word-play').textContent = 'Play'; }
 });
-$('word-speed').addEventListener('input', event => { player.setWpm(event.target.value); $('word-speed-value').textContent = `${player.wpm} WPM`; });
+$('word-speed').addEventListener('input', event => { player.setWpm(event.target.value); prefs.wordWpm = player.wpm; $('word-speed-value').textContent = `${player.wpm} WPM`; savePrefs(); });
 $('word-mode').addEventListener('keydown', event => { if (event.key === 'Escape') { event.preventDefault(); finishWordMode(); } });
 
 function setNotesWidth(value) { prefs.notesWidth = Math.max(20, Math.min(65, value)); document.documentElement.style.setProperty('--notes-width', `${prefs.notesWidth}%`); $('pane-resizer').setAttribute('aria-valuenow', String(prefs.notesWidth)); savePrefs(); }
@@ -252,4 +289,9 @@ document.addEventListener('keydown', event => {
 
 applyPrefs();
 const boot = $('boot-text');
-if (boot.textContent.trim()) openDocument(boot.textContent, boot.dataset.source || 'File');
+if (boot.textContent.trim()) {
+  const text = boot.dataset.encoding === 'base64'
+    ? new TextDecoder().decode(Uint8Array.from(atob(boot.textContent.trim()), char => char.charCodeAt(0)))
+    : boot.textContent;
+  openDocument(text, boot.dataset.source || 'File');
+}

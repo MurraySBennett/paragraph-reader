@@ -1,4 +1,7 @@
 node_modules/
 test-results/
 playwright-report/
+__pycache__/
+dist/*
+!dist/paragraph-reader.html
 .DS_Store

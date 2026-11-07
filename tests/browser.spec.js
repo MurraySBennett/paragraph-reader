@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { PDFDocument, StandardFonts } from 'pdf-lib';
+import { execFileSync } from 'node:child_process';
+import AxeBuilder from '@axe-core/playwright';
 
 test('notes can be hidden, focused, and left without stealing typing', async ({ page }) => {
   await page.goto('/');
@@ -27,8 +29,11 @@ test('reading unit, appearance, and pane size are adjustable', async ({ page }) 
   await page.getByLabel('Reading unit').selectOption('sentence');
   await expect(page.getByRole('heading', { name: 'One.' })).toBeVisible();
   await page.getByRole('button', { name: 'Appearance' }).click();
-  await page.getByLabel('Theme').selectOption('night');
+  await expect(page.getByRole('tab', { name: 'Themes' })).toBeVisible();
+  await page.getByLabel('Theme', { exact: true }).selectOption('night');
+  await page.getByRole('tab', { name: 'Typography' }).click();
   await page.getByLabel('Font size').fill('24');
+  await expect(page.getByLabel('Theme', { exact: true })).toBeHidden();
   await expect(page.locator('body')).toHaveAttribute('data-theme', 'night');
   await expect(page.locator('#chunk-text')).toHaveCSS('font-size', '24px');
   await page.getByRole('button', { name: 'Close appearance' }).click();
@@ -85,4 +90,56 @@ test('browser extracts text from a PDF and reports invalid PDFs', async ({ page 
   await page.getByRole('button', { name: 'New document' }).click();
   await page.locator('#file').setInputFiles({ name: 'broken.pdf', mimeType: 'application/pdf', buffer: Buffer.from('not a pdf') });
   await expect(page.locator('#setup-status')).toContainText('Could not open this PDF');
+});
+
+test('self-contained CLI page opens bootstrapped text from file URL', async ({ page }) => {
+  const path = execFileSync('python3', ['-c', `import runpy; from pathlib import Path; c=runpy.run_path('bin/paragraph-reader'); print(c['build_page'](Path('sample.txt'), 'CLI café text.').as_uri())`], { cwd: process.cwd(), encoding: 'utf8' }).trim();
+  await page.goto(path);
+  await expect(page.getByRole('heading', { name: 'CLI café text.' })).toBeVisible();
+});
+
+test('selected passage in a page returns notes to its source paragraph', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel('Paste text').fill('First paragraph.\n\nSecond paragraph has words.');
+  await page.getByRole('button', { name: 'Start reading' }).click();
+  await page.getByLabel('Reading unit').selectOption('page');
+  await page.locator('#chunk-text').evaluate(el => { const text = el.firstChild; const start = text.textContent.indexOf('Second'); const range = document.createRange(); range.setStart(text, start); range.setEnd(text, start + 6); const selection = getSelection(); selection.removeAllRanges(); selection.addRange(range); });
+  await page.getByRole('button', { name: 'Read words' }).click();
+  await expect(page.getByRole('dialog', { name: 'Word reader' })).toBeHidden({ timeout: 5000 });
+  await expect(page.locator('#note-title')).toHaveText('Paragraph 2');
+  await page.getByLabel('Note for current paragraph').fill('About second');
+  await page.getByLabel('Reading unit').selectOption('paragraph');
+  await page.getByRole('button', { name: 'Next chunk' }).click();
+  await expect(page.getByLabel('Note for current paragraph')).toHaveValue('About second');
+});
+
+test('word speed is remembered across sessions', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel('Paste text').fill('A few words to read.');
+  await page.getByRole('button', { name: 'Start reading' }).click();
+  await page.getByRole('button', { name: 'Read words' }).click();
+  await page.getByLabel('Words per minute').fill('800');
+  await page.getByRole('button', { name: 'Back to reading' }).click();
+  await page.reload();
+  await page.getByLabel('Paste text').fill('A few words to read.');
+  await page.getByRole('button', { name: 'Start reading' }).click();
+  await page.getByRole('button', { name: 'Read words' }).click();
+  await expect(page.getByLabel('Words per minute')).toHaveValue('800');
+});
+
+test('setup and reader have no critical accessibility violations', async ({ page }) => {
+  await page.goto('/');
+  let result = await new AxeBuilder({ page }).analyze();
+  expect(result.violations.filter(item => ['critical', 'serious'].includes(item.impact))).toEqual([]);
+  await page.getByLabel('Paste text').fill('A paragraph to inspect.');
+  await page.getByRole('button', { name: 'Start reading' }).click();
+  result = await new AxeBuilder({ page }).analyze();
+  expect(result.violations.filter(item => ['critical', 'serious'].includes(item.impact))).toEqual([]);
+});
+
+test('static release serves the reader from its own directory', async ({ page }) => {
+  await page.goto('/dist/index.html');
+  await page.getByLabel('Paste text').fill('Hosted reading works.');
+  await page.getByRole('button', { name: 'Start reading' }).click();
+  await expect(page.getByRole('heading', { name: 'Hosted reading works.' })).toBeVisible();
 });
