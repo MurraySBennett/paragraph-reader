@@ -1,11 +1,12 @@
 import { splitParagraphs } from './content.js';
 import { validatePassages } from './passages.js';
+import { isThemeId } from './themes.js';
 
 const KEY = 'paragraph-reader:v2:';
 const preferenceRules = {
   unit: value => ['paragraph', 'sentence', 'page'].includes(value),
   notes: value => typeof value === 'boolean',
-  theme: value => ['system', 'paper', 'warm', 'slate', 'night', 'contrast', 'custom'].includes(value),
+  theme: isThemeId,
   fontSize: value => Number.isInteger(value) && value >= 16 && value <= 32,
   lineHeight: value => typeof value === 'number' && Number.isFinite(value) && value >= 1.3 && value <= 2.2,
   textWidth: value => Number.isInteger(value) && value >= 35 && value <= 130,

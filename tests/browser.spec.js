@@ -45,6 +45,37 @@ test('reading unit, appearance, and pane size are adjustable', async ({ page }) 
   expect(after).not.toBe(before);
 });
 
+test('new readers get After Hours and can switch themes before opening a file', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('body')).toHaveAttribute('data-theme', 'after-hours');
+  await page.getByRole('button', { name: 'Appearance' }).click();
+  await page.getByLabel('Theme', { exact: true }).selectOption('newcastle');
+  await expect(page.locator('body')).toHaveAttribute('data-theme', 'newcastle');
+  await page.getByRole('button', { name: 'Close appearance' }).click();
+  await page.getByLabel('Paste text').fill('A teaching passage.');
+  await page.getByRole('button', { name: 'Start reading' }).click();
+  await expect(page.locator('#chunk-text')).toHaveCSS('font-family', /system-ui/);
+  await expect(page.locator('body')).toHaveAttribute('data-theme', 'newcastle');
+  await page.reload();
+  await expect(page.locator('body')).toHaveAttribute('data-theme', 'newcastle');
+});
+
+test('compact layout and campus colors cover home, reader, dialog, and word mode', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  await expect(page.locator('.eyebrow')).toHaveCount(0);
+  expect(await page.locator('#setup').evaluate(el => el.getBoundingClientRect().width)).toBeGreaterThan(1000);
+  await page.getByRole('button', { name: 'Appearance' }).click();
+  await page.getByLabel('Theme', { exact: true }).selectOption('utsa');
+  await expect(page.getByRole('dialog', { name: 'Appearance' })).toHaveCSS('background-color', 'rgb(13, 46, 83)');
+  await page.getByRole('button', { name: 'Close appearance' }).click();
+  await page.getByLabel('Paste text').fill('A short reading.');
+  await page.getByRole('button', { name: 'Start reading' }).click();
+  await expect(page.locator('#paragraph')).toHaveCSS('background-color', 'rgb(13, 46, 83)');
+  await page.getByRole('button', { name: 'Read words' }).click();
+  await expect(page.getByRole('dialog', { name: 'Word reader' })).toHaveCSS('background-color', 'rgb(3, 32, 68)');
+});
+
 test('selected words play and return to their paragraph with notes', async ({ page }) => {
   await page.goto('/');
   await page.getByLabel('Paste text').fill('Alpha beta gamma delta.\n\nAnother paragraph.');

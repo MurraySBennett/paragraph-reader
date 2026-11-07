@@ -9,8 +9,9 @@
   <title>Paragraph Reader</title>
   <link rel="stylesheet" href="./src/styles.css">
 </head>
-<body data-theme="system">
+<body data-theme="after-hours">
   <section id="setup" class="setup">
+    <div class="setup-top"><strong>Paragraph Reader</strong><button id="setup-appearance" type="button">Appearance</button></div>
     <div class="intro">
       <div class="eyebrow">A quieter way to read</div>
       <h1>Paragraph Reader</h1>
@@ -86,7 +87,7 @@
     <div class="dialog-head"><h2 id="appearance-title">Appearance</h2><button id="appearance-close" type="button" aria-label="Close appearance">×</button></div>
     <div class="tablist" role="tablist" aria-label="Appearance sections"><button id="themes-tab" role="tab" aria-controls="themes-panel" aria-selected="true">Themes</button><button id="typography-tab" role="tab" aria-controls="typography-panel" aria-selected="false" tabindex="-1">Typography</button></div>
     <div id="themes-panel" role="tabpanel" aria-labelledby="themes-tab">
-      <label>Theme <select id="theme" aria-label="Theme"><option value="system">System</option><option value="paper">Paper</option><option value="warm">Warm paper</option><option value="slate">Slate</option><option value="night">Night</option><option value="contrast">High contrast</option><option value="custom">Custom</option></select></label>
+      <label>Theme <select id="theme" aria-label="Theme"></select></label>
       <div id="custom-colors" hidden><label>Background <input id="custom-bg" type="color" value="#f8f5ef"></label><label>Text <input id="custom-text" type="color" value="#202327"></label><label>Accent <input id="custom-accent" type="color" value="#345f68"></label></div>
     </div>
     <div id="typography-panel" role="tabpanel" aria-labelledby="typography-tab" hidden>

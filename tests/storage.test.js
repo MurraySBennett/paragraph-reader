@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fingerprint, createDocument, saveDocument, loadDocument, parseBackup, validPreferences, findRecoverableDocuments } from '../src/storage.js';
 import { parseMarkdown } from '../src/markdown.js';
+import { THEMES, isThemeId } from '../src/themes.js';
 
 function memoryStorage() {
   const map = new Map();
@@ -55,6 +56,18 @@ test('v3 backup preserves formatted passages and rejects unsafe marks', async ()
 test('font preference accepts listed families and rejects arbitrary CSS', () => {
   assert.equal(validPreferences({ fontFamily: 'opendyslexic' }), true);
   assert.equal(validPreferences({ fontFamily: 'url(https://evil.test)' }), false);
+});
+
+test('theme registry accepts every preset and rejects unknown values', () => {
+  const ids = THEMES.map(theme => theme.id);
+  assert.equal(new Set(ids).size, ids.length);
+  for (const id of ['after-hours', 'neon', 'velvet', 'newcastle', 'utsa', 'ohio-state']) {
+    assert.equal(ids.includes(id), true);
+    assert.equal(isThemeId(id), true);
+    assert.equal(validPreferences({ theme: id }), true);
+  }
+  assert.equal(isThemeId('missing'), false);
+  assert.equal(validPreferences({ theme: 'missing' }), false);
 });
 
 test('older same-name notes stay recoverable after a changed import', async () => {

@@ -5,6 +5,7 @@ import { createDocument, fingerprint, loadDocument, saveDocument, parseBackup, v
 import { WordPlayer, makeWordSegments } from './word-mode.js';
 import { readPdf } from './pdf.js';
 import { importFile } from './import-file.js';
+import { fillThemeSelect } from './themes.js';
 import { parseTex } from './tex.js';
 
 const $ = id => document.getElementById(id);
@@ -20,9 +21,10 @@ try {
 } catch { storage = memoryStorage; }
 let doc = null, paragraphs = [], paragraphHashes = [], chunks = [], chunkIndex = 0, noteAnchor = null, wordSourceAnchor = null, wordScopeText = '', saveTimer = 0, toastTimer = 0, recoveryDocs = [];
 const PREF_KEY = 'paragraph-reader:preferences:v2';
-const defaults = { unit: 'paragraph', notes: true, theme: 'system', fontFamily: 'serif-classic', fontSize: 20, lineHeight: 1.7, textWidth: 100, pageWords: 250, wordWpm: 300, wordSegment: 'sentence', notesWidth: 34, editorHeight: 240, customBg: '#f8f5ef', customText: '#202327', customAccent: '#345f68' };
+const defaults = { unit: 'paragraph', notes: true, theme: 'after-hours', fontFamily: 'sans-system', fontSize: 20, lineHeight: 1.7, textWidth: 100, pageWords: 250, wordWpm: 300, wordSegment: 'sentence', notesWidth: 34, editorHeight: 240, customBg: '#f8f5ef', customText: '#202327', customAccent: '#345f68' };
 const fontStacks = { 'serif-classic': 'Iowan Old Style, Palatino Linotype, Palatino, Georgia, serif', 'serif-literary': 'Georgia, Cambria, Times New Roman, serif', 'sans-system': 'system-ui, -apple-system, Segoe UI, sans-serif', 'sans-humanist': 'Trebuchet MS, Gill Sans, Segoe UI, sans-serif', opendyslexic: 'OpenDyslexic, system-ui, sans-serif' };
 let prefs = { ...defaults };
+fillThemeSelect($('theme'));
 try { const saved = JSON.parse(storage.getItem(PREF_KEY) || '{}'); if (validPreferences(saved)) prefs = { ...defaults, ...saved, textWidth: saved.textWidth === 64 ? defaults.textWidth : (saved.textWidth ?? defaults.textWidth) }; } catch {}
 
 function status(message, error = false) {
@@ -193,7 +195,9 @@ note.addEventListener('input', () => {
 });
 function renderNoteIndexWithoutInput() { const start = note.selectionStart, end = note.selectionEnd; renderNotes(); note.focus(); note.setSelectionRange(start, end); }
 
-$('appearance-open').addEventListener('click', () => { $('font-preview').textContent = chunks[chunkIndex]?.text.slice(0, 100) || 'A paragraph to preview.'; $('appearance').showModal(); });
+function openAppearance() { $('font-preview').textContent = chunks[chunkIndex]?.text.slice(0, 100) || 'A paragraph to preview.'; $('appearance').showModal(); }
+$('appearance-open').addEventListener('click', openAppearance);
+$('setup-appearance').addEventListener('click', openAppearance);
 $('appearance-close').addEventListener('click', () => $('appearance').close());
 function showAppearanceTab(name) {
   for (const section of ['themes', 'typography']) {
