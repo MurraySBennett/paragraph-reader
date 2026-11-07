@@ -8,7 +8,8 @@
 - Both structured-passage/DOCX and examples/offline designs are approved together. Execution plan: `docs/superpowers/plans/2026-11-07-structured-import-examples-offline.md`.
 - New `/goal` launched for native execution in `feat/structured-offline-release`. Milestone 1/7 complete: plain, Markdown, and simple TeX share a validated passage model; CLI TeX retains source commands for that parser. Node 17 and Python 3 tests pass.
 - Milestone 3/7 complete: v3 rich-document backup validation, old v2 backup support, earlier-note recovery, five reader font choices including licensed OpenDyslexic. Node 24, Python 3, and browser 20 tests pass.
-- Milestone 4/7 next: semantic rendering and word-mode source anchors. The reader currently opens normalized visible text from the new importers; milestone 4 shows the retained structure and fully exercises CLI/browser TeX equivalence.
+- Milestone 4/7 complete: semantic headings/lists/emphasis/safe links render from passages, and marked-text playback returns to the correct note anchor. The CLI TeX page uses the shared browser parser. Node 24, Python 3, and browser 23 tests pass.
+- Milestone 5/7 next: curate the six credited sample files and their homepage cards.
 - The Spanish story is drafted inside the examples spec. Source curation, license checks, sample packaging, and local-file PDF/DOCX verification are implementation tasks.
 
 ## build

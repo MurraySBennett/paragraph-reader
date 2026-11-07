@@ -8,7 +8,7 @@ test('notes can be hidden, focused, and left without stealing typing', async ({ 
   await page.goto('/');
   await page.getByLabel('Paste text').fill('First paragraph.\n\nSecond paragraph.');
   await page.getByRole('button', { name: 'Start reading' }).click();
-  await expect(page.getByRole('heading', { name: 'First paragraph.' })).toBeVisible();
+  await expect(page.locator('#chunk-text')).toContainText('First paragraph.');
   await page.keyboard.press('n');
   await expect(page.getByLabel('Note for current paragraph')).toBeFocused();
   await page.keyboard.type('next note');
@@ -16,7 +16,7 @@ test('notes can be hidden, focused, and left without stealing typing', async ({ 
   await page.keyboard.press('Escape');
   await expect(page.getByLabel('Reader text')).toBeFocused();
   await page.keyboard.press('ArrowRight');
-  await expect(page.getByRole('heading', { name: 'Second paragraph.' })).toBeVisible();
+  await expect(page.locator('#chunk-text')).toContainText('Second paragraph.');
   await page.getByRole('button', { name: 'Hide notes' }).click();
   await expect(page.getByLabel('Note for current paragraph')).toBeHidden();
   await page.getByRole('button', { name: 'Show notes' }).click();
@@ -28,7 +28,7 @@ test('reading unit, appearance, and pane size are adjustable', async ({ page }) 
   await page.getByLabel('Paste text').fill('One. Two.\n\nThree.');
   await page.getByRole('button', { name: 'Start reading' }).click();
   await page.getByLabel('Reading unit').selectOption('sentence');
-  await expect(page.getByRole('heading', { name: 'One.' })).toBeVisible();
+  await expect(page.locator('#chunk-text')).toContainText('One.');
   await page.getByRole('button', { name: 'Appearance' }).click();
   await expect(page.getByRole('tab', { name: 'Themes' })).toBeVisible();
   await page.getByLabel('Theme', { exact: true }).selectOption('night');
@@ -49,12 +49,12 @@ test('selected words play and return to their paragraph with notes', async ({ pa
   await page.goto('/');
   await page.getByLabel('Paste text').fill('Alpha beta gamma delta.\n\nAnother paragraph.');
   await page.getByRole('button', { name: 'Start reading' }).click();
-  await page.locator('#chunk-text').evaluate(el => { const range = document.createRange(); range.setStart(el.firstChild, 0); range.setEnd(el.firstChild, 16); const selection = getSelection(); selection.removeAllRanges(); selection.addRange(range); });
+  await page.locator('#chunk-text').evaluate(el => { const text = el.querySelector('p').firstChild; const range = document.createRange(); range.setStart(text, 0); range.setEnd(text, 16); const selection = getSelection(); selection.removeAllRanges(); selection.addRange(range); });
   await page.getByRole('button', { name: 'Read words' }).click();
   await expect(page.getByRole('dialog', { name: 'Word reader' })).toBeVisible();
   await page.getByLabel('Words per minute').fill('800');
   await expect(page.getByRole('dialog', { name: 'Word reader' })).toBeHidden({ timeout: 5000 });
-  await expect(page.getByRole('heading', { name: 'Alpha beta gamma delta.' })).toBeVisible();
+  await expect(page.locator('#chunk-text')).toContainText('Alpha beta gamma delta.');
   await expect(page.getByLabel('Note for current paragraph')).toBeVisible();
 });
 
@@ -75,7 +75,7 @@ test('backup restores notes while malformed import leaves current work alone', a
   await page.getByRole('button', { name: 'Start reading' }).click();
   await page.getByRole('button', { name: 'Utilities' }).click();
   await page.locator('#import-backup').setInputFiles(await saved.path());
-  await expect(page.getByRole('heading', { name: 'Keep this paragraph.' })).toBeVisible();
+  await expect(page.locator('#chunk-text')).toContainText('Keep this paragraph.');
   await expect(page.getByLabel('Note for current paragraph')).toHaveValue('Important note');
 });
 
@@ -86,7 +86,7 @@ test('browser extracts text from a PDF and reports invalid PDFs', async ({ page 
   const buffer = Buffer.from(await pdf.save());
   await page.goto('/');
   await page.locator('#file').setInputFiles({ name: 'sample.pdf', mimeType: 'application/pdf', buffer });
-  await expect(page.getByRole('heading', { name: 'PDF reading works.' })).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('#chunk-text')).toContainText('PDF reading works.', { timeout: 10000 });
   await page.getByRole('button', { name: 'Utilities' }).click();
   await page.getByRole('button', { name: 'New document' }).click();
   await page.locator('#file').setInputFiles({ name: 'broken.pdf', mimeType: 'application/pdf', buffer: Buffer.from('not a pdf') });
@@ -96,7 +96,7 @@ test('browser extracts text from a PDF and reports invalid PDFs', async ({ page 
 test('self-contained CLI page opens bootstrapped text from file URL', async ({ page }) => {
   const path = execFileSync('python3', ['-c', `import runpy; from pathlib import Path; c=runpy.run_path('bin/paragraph-reader'); print(c['build_page'](Path('sample.txt'), 'CLI café text.').as_uri())`], { cwd: process.cwd(), encoding: 'utf8' }).trim();
   await page.goto(path);
-  await expect(page.getByRole('heading', { name: 'CLI café text.' })).toBeVisible();
+  await expect(page.locator('#chunk-text')).toContainText('CLI café text.');
   await page.getByRole('button', { name: 'Utilities' }).click();
   await page.getByRole('button', { name: 'New document' }).click();
   await page.locator('#file').setInputFiles({ name: 'sample.pdf', mimeType: 'application/pdf', buffer: Buffer.from('PDF') });
@@ -104,9 +104,9 @@ test('self-contained CLI page opens bootstrapped text from file URL', async ({ p
 });
 
 test('CLI TeX page keeps list items and following prose', async ({ page }) => {
-  const path = execFileSync('python3', ['-c', `import runpy; from pathlib import Path; c=runpy.run_path('bin/paragraph-reader'); p=Path('sample.tex'); print(c['build_page'](p, c['strip_tex'](r'\\begin{itemize}\\item One\\item Two\\end{itemize}' + chr(10)*2 + 'After list.')).as_uri())`], { cwd: process.cwd(), encoding: 'utf8' }).trim();
+  const path = execFileSync('python3', ['-c', `import runpy; from pathlib import Path; c=runpy.run_path('bin/paragraph-reader'); p=Path('sample.tex'); print(c['build_page'](p, r'\\begin{itemize}\\item One\\item Two\\end{itemize}' + chr(10)*2 + 'After list.').as_uri())`], { cwd: process.cwd(), encoding: 'utf8' }).trim();
   await page.goto(path);
-  await expect(page.locator('#chunk-text')).toContainText('One');
+  await expect(page.locator('#chunk-text li')).toContainText('One');
   await page.getByRole('button', { name: 'Next chunk' }).click();
   await expect(page.locator('#chunk-text')).toContainText('Two');
   await page.getByRole('button', { name: 'Next chunk' }).click();
@@ -118,7 +118,7 @@ test('selected passage in a page returns notes to its source paragraph', async (
   await page.getByLabel('Paste text').fill('First paragraph.\n\nSecond paragraph has words.');
   await page.getByRole('button', { name: 'Start reading' }).click();
   await page.getByLabel('Reading unit').selectOption('page');
-  await page.locator('#chunk-text').evaluate(el => { const text = el.firstChild; const start = text.textContent.indexOf('Second'); const range = document.createRange(); range.setStart(text, start); range.setEnd(text, start + 6); const selection = getSelection(); selection.removeAllRanges(); selection.addRange(range); });
+  await page.locator('#chunk-text').evaluate(el => { const text = el.querySelectorAll('p')[1].firstChild; const range = document.createRange(); range.setStart(text, 0); range.setEnd(text, 6); const selection = getSelection(); selection.removeAllRanges(); selection.addRange(range); });
   await page.getByRole('button', { name: 'Read words' }).click();
   await expect(page.getByRole('dialog', { name: 'Word reader' })).toBeHidden({ timeout: 5000 });
   await expect(page.locator('#note-title')).toHaveText('Paragraph 2');
@@ -156,7 +156,7 @@ test('static release serves the reader from its own directory', async ({ page })
   await page.goto('/dist/index.html');
   await page.getByLabel('Paste text').fill('Hosted reading works.');
   await page.getByRole('button', { name: 'Start reading' }).click();
-  await expect(page.getByRole('heading', { name: 'Hosted reading works.' })).toBeVisible();
+  await expect(page.locator('#chunk-text')).toContainText('Hosted reading works.');
 });
 
 test('notes survive an immediate reload and separator keys do not navigate', async ({ page }) => {
@@ -170,7 +170,7 @@ test('notes survive an immediate reload and separator keys do not navigate', asy
   await expect(page.getByLabel('Note for current paragraph')).toHaveValue('Keep immediately');
   await page.getByRole('separator', { name: 'Resize notes panel' }).focus();
   await page.keyboard.press('ArrowRight');
-  await expect(page.getByRole('heading', { name: 'First paragraph.' })).toBeVisible();
+  await expect(page.locator('#chunk-text')).toContainText('First paragraph.');
 });
 
 test('file controls are keyboard reachable and backup restores from setup', async ({ page }) => {
@@ -184,7 +184,7 @@ test('file controls are keyboard reachable and backup restores from setup', asyn
     return { version: 2, id, name: 'backup.txt', text, index: 0, notes: {}, updated: new Date().toISOString() };
   });
   await page.locator('#setup-import-backup').setInputFiles({ name: 'reading.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ version: 2, document: doc, preferences: {} })) });
-  await expect(page.getByRole('heading', { name: 'Restored from setup.' })).toBeVisible();
+  await expect(page.locator('#chunk-text')).toContainText('Restored from setup.');
 });
 
 test('word reader keeps keyboard focus inside its dialog', async ({ page }) => {

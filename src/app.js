@@ -1,4 +1,6 @@
-import { prepareText, splitParagraphs, makeChunks } from './content.js';
+import { prepareText, splitParagraphs } from './content.js';
+import { parsePlain, makeStructuredChunks } from './passages.js';
+import { renderChunk, sourceAnchorForSelection } from './render-passages.js';
 import { createDocument, fingerprint, loadDocument, saveDocument, parseBackup, validPreferences, findRecoverableDocuments } from './storage.js';
 import { WordPlayer } from './word-mode.js';
 import { readPdf } from './pdf.js';
@@ -94,7 +96,7 @@ function render() {
   $('document-name').textContent = doc.name;
   $('progress').textContent = `${chunkIndex + 1} of ${chunks.length} ${prefs.unit}${chunks.length === 1 ? '' : 's'}`;
   $('chunk-label').textContent = `${prefs.unit} ${chunkIndex + 1}`;
-  $('chunk-text').textContent = chunk.text;
+  renderChunk($('chunk-text'), chunk);
   $('previous').disabled = chunkIndex === 0;
   $('next').disabled = chunkIndex === chunks.length - 1;
   renderNotes(); saveDocSoon();
@@ -104,7 +106,7 @@ function setUnit(unit) {
   const current = chunks[chunkIndex]?.start ?? doc?.index ?? 0;
   noteAnchor = null;
   prefs.unit = ['paragraph', 'sentence', 'page'].includes(unit) ? unit : 'paragraph';
-  chunks = makeChunks(paragraphs, prefs.unit, prefs.pageWords);
+  chunks = makeStructuredChunks(doc.version === 3 ? doc.blocks : parsePlain(doc.text, doc.name).blocks, prefs.unit, prefs.pageWords);
   chunkIndex = Math.max(0, chunks.findIndex(chunk => chunk.start <= current && chunk.end >= current));
   savePrefs(); render();
 }
@@ -123,7 +125,7 @@ async function openDocument(text, name = 'Pasted text', preparedAlready = false,
     // Drop notes whose source text changed in a malformed or old saved record.
     for (const [key, value] of Object.entries(doc.notes)) if (paragraphHashes[Number(key)] !== value?.source) delete doc.notes[key];
     setup.hidden = true; shell.hidden = false;
-    chunks = makeChunks(paragraphs, prefs.unit, prefs.pageWords);
+    chunks = makeStructuredChunks(doc.version === 3 ? doc.blocks : parsePlain(doc.text, doc.name).blocks, prefs.unit, prefs.pageWords);
     chunkIndex = Math.max(0, chunks.findIndex(chunk => chunk.start <= doc.index && chunk.end >= doc.index));
     render(); card.focus(); return true;
   } catch (error) { $('setup-status').textContent = error.message || 'Could not read this document.'; return false; }
@@ -230,7 +232,7 @@ async function restoreBackup(event) {
     paragraphs = doc.version === 3 ? doc.blocks.map(block => block.text) : splitParagraphs(doc.text);
     noteAnchor = null;
     paragraphHashes = await Promise.all(paragraphs.map(fingerprint));
-    chunks = makeChunks(paragraphs, prefs.unit, prefs.pageWords);
+    chunks = makeStructuredChunks(doc.version === 3 ? doc.blocks : parsePlain(doc.text, doc.name).blocks, prefs.unit, prefs.pageWords);
     chunkIndex = Math.max(0, chunks.findIndex(chunk => chunk.start <= doc.index && chunk.end >= doc.index));
     render(); saveDoc(); $('utilities').hidden = true; status('Backup restored');
   } catch (error) {
@@ -260,19 +262,7 @@ $('word-start').addEventListener('click', () => {
   const selected = selection?.toString().trim();
   const inCard = selected && card.contains(selection.anchorNode);
   const text = inCard ? selected : chunks[chunkIndex].text;
-  wordSourceAnchor = chunks[chunkIndex].start;
-  if (inCard && prefs.unit === 'page') {
-    const range = selection.getRangeAt(0).cloneRange();
-    const prefix = range.cloneRange();
-    prefix.selectNodeContents($('chunk-text'));
-    prefix.setEnd(range.startContainer, range.startOffset);
-    const offset = prefix.toString().length;
-    let position = 0;
-    for (let i = chunks[chunkIndex].start; i <= chunks[chunkIndex].end; i++) {
-      if (offset < position + paragraphs[i].length + 2 || i === chunks[chunkIndex].end) { wordSourceAnchor = i; break; }
-      position += paragraphs[i].length + 2;
-    }
-  }
+  wordSourceAnchor = inCard ? sourceAnchorForSelection(chunks[chunkIndex], selection) : chunks[chunkIndex].start;
   if (!text) return;
   $('word-mode').showModal();
   $('word-display').textContent = '';
@@ -319,7 +309,7 @@ document.addEventListener('keydown', event => {
   if (event.defaultPrevented || shell.hidden || $('word-mode').open || $('appearance').open || $('shortcuts').open) return;
   if (event.key === 'Escape' && document.activeElement === note) { event.preventDefault(); card.focus(); return; }
   const target = event.target;
-  if (target instanceof HTMLElement && (target.matches('input, textarea, select, button') || target.isContentEditable)) return;
+  if (target instanceof HTMLElement && (target.matches('input, textarea, select, button, a') || target.isContentEditable)) return;
   if (event.metaKey || event.ctrlKey || event.altKey) return;
   if (event.key.toLowerCase() === 'n' && prefs.notes) { event.preventDefault(); note.focus(); return; }
   if (['ArrowRight', 'PageDown', ' ', 'j'].includes(event.key)) { event.preventDefault(); move(1); }
@@ -333,6 +323,7 @@ if (boot.textContent.trim()) {
     ? new TextDecoder().decode(Uint8Array.from(atob(boot.textContent.trim()), char => char.charCodeAt(0)))
     : boot.textContent;
   const source = boot.dataset.source || 'File';
-  openDocument(boot.dataset.prepared === 'false' && /\.(tex|ltx)$/i.test(source) ? parseTex(text, source).text : text, source, true);
+  const parsed = boot.dataset.prepared === 'false' && /\.(tex|ltx)$/i.test(source) ? parseTex(text, source) : null;
+  openDocument(parsed?.text ?? text, source, true, parsed?.blocks ?? null);
 }
 window.addEventListener('pagehide', saveDoc);
