@@ -86,14 +86,15 @@ test('compact layout and campus colors cover home, reader, dialog, and word mode
 });
 
 test('mobile reader keeps its name and controls visible without horizontal overflow', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 320, height: 844 });
   await page.goto('/');
   await page.getByLabel('Paste text').fill('A short reading.');
   await page.getByRole('button', { name: 'Start reading' }).click();
   await expect(page.locator('.toolbar .brand')).toContainText('Paragraph Reader');
   await expect(page.locator('.toolbar .brand span').last()).toBeVisible();
   await expect(page.getByRole('button', { name: 'Appearance' })).toBeVisible();
-  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  await expect(page.getByRole('button', { name: 'Utilities' })).toBeInViewport();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
 });
 
 test('selected words play and return to their paragraph with notes', async ({ page }) => {
