@@ -2,6 +2,7 @@
 
 ## Now
 
+- After Hours selected for the new visual direction: compact layout, consistent alignment, sans typography, and no eyebrow labels. Add optional Neon, Velvet, Newcastle, UT San Antonio, and Ohio State palettes; make the institution set easy to extend. The design is in `docs/superpowers/specs/2026-11-08-visual-identity-and-themes-design.md`; teaching links will not set themes in this phase.
 - Reader text width enlarged from 64ch to 100ch by default, with a 130ch control limit; published at https://murraysbennett.github.io/paragraph-reader/.
 - Word mode now opens paused, plays by its own sentence/paragraph setting, and waits for N/Next between segments at https://murraysbennett.github.io/paragraph-reader/.
 - Pacing plan: `docs/superpowers/plans/2026-11-07-word-reader-pacing.md`; implementation and review fix are complete.
@@ -10,6 +11,7 @@
 
 ## build
 
+- [ ] next — Specify and implement the selected home/reader visual style and optional site-wide palettes; choose a broader product name.
 - [x] 2026-11-07 — Widen the default reader text column while retaining edge padding and a narrower user choice.
 - [x] 2026-11-07 — Add paused word-reader entry and sentence/paragraph pacing with explicit N/Next between segments; preserve selection and notes anchors.
 - [x] 2026-11-07 — Build the approved six-example library and homepage entry points after verifying source rights and formats.
