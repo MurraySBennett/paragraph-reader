@@ -7,10 +7,12 @@
 - The terminal helper remains at `tools/paragraph-reader`; its cached HTML page accepts files locally and explains how to open another PDF through the helper.
 - Structured-passage design now includes local DOCX import and a legacy DOC conversion message; independent builder check found no important gaps. User approval is pending.
 - Sample shortlist spans Rainbow TXT, a published TeX excerpt and PDF, GRIN Markdown, fiction, and beginner Spanish. Selection and source packaging are pending.
+- Distribution design now includes an installable offline browser app, a downloadable local copy, and a repository path; choose the first release route before packaging.
 
 ## build
 
 - [ ] now — Choose and license a compact example set spanning genres and TXT, TeX, PDF, Markdown, and DOCX formats; design the home-page sample entry points.
+- [ ] now — Design a novice-friendly local install/download route for desktop and mobile, with clear backup and offline behaviour; assess native installers as a later phase.
 - [ ] later — Design a notes review space and better Markdown export, with optional local copyable prompt composition for an external AI assistant; no automatic sending.
 - [ ] now — Design supported inline formatting across document types and reader font families, including a dyslexia-oriented option; leave preamble grouping unchanged unless requested again.
 - [x] 2026-11-07 — Implement the public reader design, verify it, and publish the static release.
