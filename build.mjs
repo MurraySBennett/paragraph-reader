@@ -9,13 +9,16 @@ await cp(join(root, 'src'), join(dist, 'src'), { recursive: true });
 await cp(join(root, 'vendor'), join(dist, 'vendor'), { recursive: true });
 await cp(join(root, 'favicon.svg'), join(dist, 'favicon.svg'));
 const html = await readFile(join(root, 'index.html'), 'utf8');
-await writeFile(join(dist, 'index.html'), html);
+await writeFile(join(dist, 'index.html'), html.replace('src="./dist/app.js"', 'src="./app.js"'));
+
+await build({ entryPoints: [join(root, 'src/import-file.js')], outfile: join(dist, 'import-file.js'), bundle: true, format: 'esm', platform: 'browser', target: 'es2022', minify: true });
 
 const bundled = await build({ entryPoints: [join(root, 'src/app.js')], bundle: true, format: 'iife', platform: 'browser', target: 'es2022', write: false, minify: true });
 const js = bundled.outputFiles[0].text.replace(/<\/script/gi, '<\\/script');
+await writeFile(join(dist, 'app.js'), bundled.outputFiles[0].text);
 const css = (await readFile(join(root, 'src/styles.css'), 'utf8')).replace(/<\/style/gi, '<\\/style');
 const single = html
   .replace('<link rel="stylesheet" href="./src/styles.css">', () => `<style>${css}</style>`)
-  .replace('<script type="module" src="./src/app.js"></script>', () => `<script>${js}</script>`);
+  .replace('<script type="module" src="./dist/app.js"></script>', () => `<script>${js}</script>`);
 await writeFile(join(dist, 'paragraph-reader.html'), single);
 console.log('Built dist/index.html and dist/paragraph-reader.html');

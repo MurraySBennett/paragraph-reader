@@ -9,11 +9,14 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
     "@playwright/test": "^1.65.0",
+    "docx": "^9.15.3",
     "esbuild": "^0.28.2",
     "pdf-lib": "^1.17.1"
   },
   "dependencies": {
+    "mammoth": "^1.13.0",
     "markdown-it": "^14.3.3",
+    "parse5": "^8.1.0",
     "pdfjs-dist": "^6.5.438"
   }
 }

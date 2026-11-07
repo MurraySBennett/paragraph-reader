@@ -2,6 +2,8 @@ import { prepareText, splitParagraphs, makeChunks } from './content.js';
 import { createDocument, fingerprint, loadDocument, saveDocument, parseBackup, validPreferences } from './storage.js';
 import { WordPlayer } from './word-mode.js';
 import { readPdf } from './pdf.js';
+import { importFile } from './import-file.js';
+import { parseTex } from './tex.js';
 
 const $ = id => document.getElementById(id);
 const setup = $('setup'), shell = $('reader-shell'), card = $('paragraph'), note = $('note');
@@ -122,6 +124,13 @@ async function openDocument(text, name = 'Pasted text', preparedAlready = false)
   } catch (error) { $('setup-status').textContent = error.message || 'Could not read this document.'; return false; }
 }
 
+async function openImportedFile(file) {
+  const pdf = /\.pdf$/i.test(file.name) || file.type === 'application/pdf';
+  if (pdf && $('boot-text').dataset.cli === 'true') throw new Error('To open a PDF from a local reader page, run paragraph-reader <file.pdf> in the terminal.');
+  const parsed = await importFile(file);
+  return openDocument(parsed.text, parsed.name, true);
+}
+
 function move(delta) { if (!doc) return; const target = Math.max(0, Math.min(chunks.length - 1, chunkIndex + delta)); if (target !== chunkIndex) { chunkIndex = target; noteAnchor = null; render(); } }
 
 $('start').addEventListener('click', () => openDocument($('input').value));
@@ -130,10 +139,7 @@ $('file').addEventListener('change', async event => {
   const file = event.target.files?.[0]; if (!file) return;
   try {
     $('setup-status').textContent = 'Opening file…';
-    const pdf = /\.pdf$/i.test(file.name) || file.type === 'application/pdf';
-    if (pdf && $('boot-text').dataset.cli === 'true') throw new Error('To open a PDF from a local reader page, run paragraph-reader <file.pdf> in the terminal.');
-    const text = pdf ? await readPdf(file) : await file.text();
-    if (await openDocument(text, file.name)) $('setup-status').textContent = '';
+    if (await openImportedFile(file)) $('setup-status').textContent = '';
   } catch (error) { $('setup-status').textContent = error.message || 'Could not open that file.'; }
   event.target.value = '';
 });
@@ -308,6 +314,7 @@ if (boot.textContent.trim()) {
   const text = boot.dataset.encoding === 'base64'
     ? new TextDecoder().decode(Uint8Array.from(atob(boot.textContent.trim()), char => char.charCodeAt(0)))
     : boot.textContent;
-  openDocument(text, boot.dataset.source || 'File', boot.dataset.prepared === 'true');
+  const source = boot.dataset.source || 'File';
+  openDocument(boot.dataset.prepared === 'false' && /\.(tex|ltx)$/i.test(source) ? parseTex(text, source).text : text, source, true);
 }
 window.addEventListener('pagehide', saveDoc);

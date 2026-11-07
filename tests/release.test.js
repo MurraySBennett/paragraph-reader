@@ -7,7 +7,8 @@ test('release builds static site and self-contained CLI page', () => {
   execFileSync('node', ['build.mjs'], { cwd: process.cwd() });
   const web = readFileSync('dist/index.html', 'utf8');
   const cli = readFileSync('dist/paragraph-reader.html', 'utf8');
-  assert.match(web, /<script type="module" src="\.\/src\/app\.js"><\/script>/);
+  assert.match(web, /<script type="module" src="\.\/app\.js"><\/script>/);
+  assert.equal(existsSync('dist/app.js'), true);
   assert.match(cli, /<style>[\s\S]*reading-card/);
   assert.match(cli, /<script>[\s\S]*getElementById/);
   assert.doesNotMatch(cli, /src="\.\/src\/app\.js"/);

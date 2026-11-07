@@ -18,11 +18,11 @@
     <label for="input">Paste text</label>
     <textarea id="input" aria-label="Paste text" placeholder="Paste an article, draft, or passage here…"></textarea>
     <div class="setup-actions">
-      <label class="button file-button">Open a file<input id="file" type="file" accept=".txt,.md,.markdown,.tex,.ltx,.pdf,text/plain,text/markdown,application/pdf"></label>
+      <label class="button file-button">Open a file<input id="file" type="file" accept=".txt,.md,.markdown,.tex,.ltx,.docx,.doc,.pdf,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"></label>
       <label class="button file-button">Restore backup<input id="setup-import-backup" type="file" accept=".json,application/json"></label>
       <button id="start" class="primary">Start reading <span aria-hidden="true">→</span></button>
     </div>
-    <p class="muted small">Text, Markdown, TeX, and text-based PDF. Files are processed on this device.</p>
+    <p class="muted small">Text, Markdown, TeX, DOCX, and text-based PDF. Files are processed on this device.</p>
     <p id="setup-status" role="status"></p>
   </section>
 
@@ -89,6 +89,6 @@
     <div class="word-controls"><button id="word-play" type="button">Pause</button><label>Speed <input id="word-speed" aria-label="Words per minute" type="range" min="100" max="800" step="25" value="300"><output id="word-speed-value">300 WPM</output></label></div>
   </dialog>
   <script id="boot-text" type="text/plain" data-source=""></script>
-  <script type="module" src="./src/app.js"></script>
+  <script type="module" src="./dist/app.js"></script>
 </body>
 </html>

@@ -12,7 +12,9 @@ npm run build
 python3 -m http.server 8000 --directory dist
 ```
 
-Open `http://localhost:8000`. The source page can also be served from the repository root during development. The static release is in `dist/`.
+Open `http://localhost:8000`. For development from the repository root, run `npm run build` first because the page loads the generated browser bundle. The static release is in `dist/`.
+
+The browser accepts `.txt`, `.md`, `.markdown`, `.tex`, `.ltx`, `.docx`, and text-based `.pdf` files. DOCX import keeps headings, lists, and inline emphasis where present; files over 15 MB are rejected. Older `.doc` files need to be saved as `.docx` in Word or LibreOffice before opening them here. Files are parsed on the device.
 
 The terminal helper accepts `.txt`, `.md`, `.tex`, and text-based `.pdf` files:
 
@@ -41,4 +43,4 @@ npx playwright test
 
 On NixOS, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE` to a working Chromium wrapper path when running browser tests. `npm run build` makes `dist/index.html` for static hosting and `dist/paragraph-reader.html` for the CLI.
 
-PDF.js is distributed under the Apache License 2.0; its license is included at `vendor/LICENSE` and copied into the hosted release.
+PDF.js is distributed under the Apache License 2.0; its license is included at `vendor/LICENSE`. The direct Markdown and DOCX parser licenses are at `vendor/MARKDOWN-IT-LICENSE`, `vendor/MAMMOTH-LICENSE`, and `vendor/PARSE5-LICENSE`; all are copied into the hosted release.
