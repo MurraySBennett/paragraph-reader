@@ -2,16 +2,15 @@
 
 ## Now
 
-- Executing `docs/superpowers/plans/2026-11-08-visual-identity-and-themes.md` from the approved design; first milestone is theme registration and preference behavior. Teaching links will not set themes in this phase.
-- Reader text width enlarged from 64ch to 100ch by default, with a 130ch control limit; published at https://murraysbennett.github.io/paragraph-reader/.
-- Word mode now opens paused, plays by its own sentence/paragraph setting, and waits for N/Next between segments at https://murraysbennett.github.io/paragraph-reader/.
-- Pacing plan: `docs/superpowers/plans/2026-11-07-word-reader-pacing.md`; implementation and review fix are complete.
-- GitHub Pages run 42347625233 passed Node, Python, hosted Chromium, Linux/macOS/Windows extracted-ZIP checks, and deployment; live page, stylesheet, and ZIP returned HTTP 200.
-- The terminal helper remains at `tools/paragraph-reader`; native installers and a notes review space remain later build tasks.
+- The approved visual refresh and optional site-wide palettes are published at https://murraysbennett.github.io/paragraph-reader/ under `docs/superpowers/plans/2026-11-08-visual-identity-and-themes.md`.
+- GitHub Pages run 42413284389 passed Node, Python, hosted Chromium, Linux/macOS/Windows extracted-ZIP checks, and deployment; the new themes also passed mobile home/reader accessibility checks.
+- Next build decision: choose a broader product name before changing the public title and app identity. Teaching links will not set themes in this phase.
+- Native installers and a notes review space remain later build tasks; the terminal helper is at `tools/paragraph-reader`.
 
 ## build
 
-- [ ] next — Specify and implement the selected home/reader visual style and optional site-wide palettes; choose a broader product name.
+- [x] 2026-11-08 — Implement the selected home/reader visual style and optional site-wide palettes, including responsive and contrast corrections.
+- [ ] next — Choose a broader product name before changing the public title and app identity.
 - [x] 2026-11-07 — Widen the default reader text column while retaining edge padding and a narrower user choice.
 - [x] 2026-11-07 — Add paused word-reader entry and sentence/paragraph pacing with explicit N/Next between segments; preserve selection and notes anchors.
 - [x] 2026-11-07 — Build the approved six-example library and homepage entry points after verifying source rights and formats.
