@@ -1,21 +1,53 @@
 export function tokenizeWords(text) { return String(text || '').trim().split(/\s+/u).filter(Boolean); }
 export function normalizeWpm(value) { return Math.max(100, Math.min(800, Number(value) || 300)); }
 
+export function makeWordSegments(text, unit = 'sentence') {
+  const paragraphs = String(text || '').replace(/\r\n?/g, '\n').split(/\n\s*\n+/u).map(value => value.trim()).filter(Boolean);
+  if (unit === 'paragraph') return paragraphs;
+  const segmenter = new Intl.Segmenter(undefined, { granularity: 'sentence' });
+  return paragraphs.flatMap(paragraph => [...segmenter.segment(paragraph)].map(item => item.segment.trim()).filter(Boolean));
+}
+
 export class WordPlayer {
-  constructor({ onWord, onFinish, wpm = 300 }) {
-    this.onWord = onWord; this.onFinish = onFinish; this.wpm = normalizeWpm(wpm);
-    this.words = []; this.index = 0; this.timer = null; this.paused = false;
+  constructor({ onWord = () => {}, onState = () => {}, wpm = 300 }) {
+    this.onWord = onWord; this.onState = onState; this.wpm = normalizeWpm(wpm);
+    this.segments = []; this.segmentIndex = 0; this.words = []; this.index = 0; this.timer = null; this.state = 'finished';
   }
-  start(text) { this.stop(false); this.words = tokenizeWords(text); this.index = 0; this.paused = false; this.tick(); }
+  get paused() { return this.state !== 'playing'; }
+  setState(value) { this.state = value; this.onState(value); }
+  load(segments) {
+    this.stop();
+    this.segments = segments.map(text => String(text).trim()).filter(Boolean);
+    this.segmentIndex = 0; this.index = 0;
+    this.words = tokenizeWords(this.segments[0]);
+    this.setState(this.words.length ? 'ready' : 'finished');
+  }
+  start() { if (this.state !== 'ready') return false; this.setState('playing'); this.tick(); return true; }
   tick() {
-    if (this.paused) return;
-    if (this.index >= this.words.length) { this.stop(false); this.onFinish(); return; }
-    this.onWord(this.words[this.index], this.index + 1, this.words.length);
+    if (this.state !== 'playing') return;
+    if (this.index >= this.words.length) {
+      this.timer = null;
+      this.setState(this.segmentIndex < this.segments.length - 1 ? 'waiting' : 'finished');
+      return;
+    }
+    this.onWord(this.words[this.index], this.index + 1, this.words.length, this.segmentIndex + 1, this.segments.length);
     this.index++;
     this.timer = setTimeout(() => this.tick(), 60000 / this.wpm);
   }
-  pause() { this.paused = true; clearTimeout(this.timer); }
-  resume() { if (!this.paused) return; this.paused = false; this.tick(); }
-  setWpm(value) { this.wpm = normalizeWpm(value); if (!this.paused && this.timer) { clearTimeout(this.timer); this.timer = setTimeout(() => this.tick(), 60000 / this.wpm); } }
-  stop(finish = false) { clearTimeout(this.timer); this.timer = null; this.paused = true; if (finish) this.onFinish(); }
+  pause() { if (this.state !== 'playing') return; clearTimeout(this.timer); this.timer = null; this.setState('paused'); }
+  resume() { if (this.state !== 'paused') return false; this.setState('playing'); this.tick(); return true; }
+  next() {
+    if (this.state !== 'waiting') return false;
+    this.segmentIndex++;
+    this.words = tokenizeWords(this.segments[this.segmentIndex]); this.index = 0;
+    this.setState('playing'); this.tick(); return true;
+  }
+  setWpm(value) {
+    this.wpm = normalizeWpm(value);
+    if (this.state === 'playing' && this.timer) {
+      clearTimeout(this.timer);
+      this.timer = setTimeout(() => this.tick(), 60000 / this.wpm);
+    }
+  }
+  stop() { clearTimeout(this.timer); this.timer = null; this.setState('finished'); }
 }
