@@ -4,6 +4,8 @@ A quiet, one-chunk-at-a-time reader for text you bring yourself. Read by paragra
 
 **Use online:** https://murraysbennett.github.io/paragraph-reader/
 
+The homepage has six ready-to-read examples across TXT, TeX, DOCX, Markdown, and PDF. Their sources and rights are recorded in [samples/README.md](samples/README.md). Choose **Install on this device** for the offline browser app, or **Download offline copy** for a ZIP that opens in a desktop browser without installing developer tools. The installed app and downloaded copy may store notes separately; use **Download backup** and **Restore backup** when switching.
+
 ## Use locally
 
 ```sh
@@ -12,7 +14,7 @@ npm run build
 python3 -m http.server 8000 --directory dist
 ```
 
-Open `http://localhost:8000`. For development from the repository root, run `npm run build` first because the page loads the generated browser bundle. The static release is in `dist/`.
+Open `http://localhost:8000`. For development from the repository root, run `npm run build` first because the page loads the generated browser bundle. The static release is in `dist/`. The build also produces a dated offline ZIP containing a self-contained HTML reader, all six examples, source credits, and dependency notices.
 
 The browser accepts `.txt`, `.md`, `.markdown`, `.tex`, `.ltx`, `.docx`, and text-based `.pdf` files. DOCX import keeps headings, lists, and inline emphasis where present; files over 15 MB are rejected. Older `.doc` files need to be saved as `.docx` in Word or LibreOffice before opening them here. Files are parsed on the device.
 
@@ -43,4 +45,6 @@ npx playwright test
 
 On NixOS, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE` to a working Chromium wrapper path when running browser tests. `npm run build` makes `dist/index.html` for static hosting and `dist/paragraph-reader.html` for the CLI.
 
-PDF.js is distributed under the Apache License 2.0; its license is included at `vendor/LICENSE`. The direct Markdown and DOCX parser licenses are at `vendor/MARKDOWN-IT-LICENSE`, `vendor/MAMMOTH-LICENSE`, and `vendor/PARSE5-LICENSE`. OpenDyslexic is under SIL OFL at `vendor/OPENDYSLEXIC-OFL.txt`. These files are copied into the hosted release.
+PDF.js is distributed under the Apache License 2.0; its license is included at `vendor/LICENSE`. The direct Markdown, DOCX, and ZIP parser licenses are at `vendor/MARKDOWN-IT-LICENSE`, `vendor/MAMMOTH-LICENSE`, `vendor/PARSE5-LICENSE`, and `vendor/FFLATE-LICENSE`. OpenDyslexic is under SIL OFL at `vendor/OPENDYSLEXIC-OFL.txt`. These files are copied into the hosted release.
+
+The web app manifest and service worker precache the reader, parsers, font, and samples under the hosting subpath. The downloaded HTML embeds its runtime dependencies so fresh TXT, Markdown, TeX, DOCX, and text-based PDF files can be opened through `file:` on desktop Chromium. Other browser engines still need independent local-file checks.

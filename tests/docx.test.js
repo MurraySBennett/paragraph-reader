@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
 import { importFile } from '../src/import-file.js';
 import { passagesFromDocxHtml } from '../src/docx.js';
+import { zipSync } from 'fflate';
 
 test('DOCX file import extracts heading, bold text and bullet item', async () => {
   const document = new Document({ sections: [{ children: [
@@ -33,4 +34,20 @@ test('DOCX HTML conversion strips unsafe links and ignores media', () => {
 test('oversized DOCX fails before conversion', async () => {
   const huge = new File([new Uint8Array(15 * 1024 * 1024 + 1)], 'huge.docx');
   await assert.rejects(importFile(huge), /15 MB/);
+});
+
+test('highly compressed DOCX is rejected before conversion', async () => {
+  const compressed = zipSync({ 'word/document.xml': new Uint8Array(3 * 1024 * 1024) }, { level: 9 });
+  const file = new File([compressed], 'bomb.docx');
+  await assert.rejects(importFile(file), /compressed|large|safely/i);
+});
+
+test('forged ZIP size fields cannot bypass DOCX expansion limit', async () => {
+  const bytes = zipSync({ 'word/document.xml': new Uint8Array(3 * 1024 * 1024) }, { level: 9 });
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  for (let i = 0; i <= bytes.length - 46; i++) {
+    if (view.getUint32(i, true) === 0x04034b50) view.setUint32(i + 22, 100, true);
+    if (view.getUint32(i, true) === 0x02014b50) view.setUint32(i + 24, 100, true);
+  }
+  await assert.rejects(importFile(new File([bytes], 'forged.docx')), /compressed|large|safely/i);
 });

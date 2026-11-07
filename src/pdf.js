@@ -1,8 +1,8 @@
 export async function readPdf(file) {
-  let pdfjs;
-  try { pdfjs = await import(new URL('./vendor/pdf.mjs', document.baseURI).href); }
+  let pdfjs = globalThis.__PARAGRAPH_PDFJS__;
+  try { pdfjs ||= await import(new URL('./vendor/pdf.mjs', document.baseURI).href); }
   catch { throw new Error('PDF reader could not load. Check your connection and try again.'); }
-  pdfjs.GlobalWorkerOptions.workerSrc = new URL('./vendor/pdf.worker.mjs', document.baseURI).href;
+  pdfjs.GlobalWorkerOptions.workerSrc = globalThis.__PARAGRAPH_PDF_WORKER_URL__ || new URL('./vendor/pdf.worker.mjs', document.baseURI).href;
   let pdf;
   try { pdf = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise; }
   catch { throw new Error('Could not open this PDF. It may be damaged or password protected.'); }

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
   <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+  <link rel="manifest" href="./dist/manifest.webmanifest">
   <title>Paragraph Reader</title>
   <link rel="stylesheet" href="./src/styles.css">
 </head>
@@ -24,6 +25,20 @@
     </div>
     <p class="muted small">Text, Markdown, TeX, DOCX, and text-based PDF. Files are processed on this device.</p>
     <p id="setup-status" role="status"></p>
+    <section class="examples" aria-labelledby="examples-title">
+      <div class="section-head"><div><span class="eyebrow">Start with a sample</span><h2 id="examples-title">Try an example</h2></div></div>
+      <div class="sample-grid">
+        <article class="sample-card" data-sample="rainbow-passage.txt"><span class="format">TXT</span><h3>Rainbow Passage</h3><p>A short classic for a quick first read.</p><div class="sample-actions"><button type="button">Read example</button><a href="./samples/rainbow-passage.txt" download>Download file</a></div><small>Grant Fairbanks · <a href="https://www.dialectsarchive.com/the-rainbow-passage">public domain source</a></small></article>
+        <article class="sample-card" data-sample="human-machine-teams.tex"><span class="format">TeX</span><h3>Human–machine teams</h3><p>A research methods excerpt in source form.</p><div class="sample-actions"><button type="button">Read example</button><a href="./samples/human-machine-teams.tex" download>Download file</a></div><small>Adapted from <a href="https://doi.org/10.1111/tops.12683">Bennett et al.</a> · <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a></small></article>
+        <article class="sample-card" data-sample="lion-and-mouse.docx"><span class="format">DOCX</span><h3>The Lion and the Mouse</h3><p>A familiar fable packaged as a Word document.</p><div class="sample-actions"><button type="button">Read example</button><a href="./samples/lion-and-mouse.docx" download>Download file</a></div><small>Aesop, retold by Joseph Jacobs · <a href="https://www.gutenberg.org/ebooks/28">US public domain</a></small></article>
+        <article class="sample-card" data-sample="la-llave-de-lucia.md"><span class="format">Markdown</span><h3>La llave de Lucía</h3><p>An original beginner Spanish story with a glossary.</p><div class="sample-actions"><button type="button">Read example</button><a href="./samples/la-llave-de-lucia.md" download>Download file</a></div><small>Original Paragraph Reader example</small></article>
+      </div>
+      <details class="more-examples"><summary>More examples</summary><div class="sample-grid">
+        <article class="sample-card" data-sample="dutch-auctions.pdf"><span class="format">PDF</span><h3>Dutch auctions</h3><p>A published research article with page structure.</p><div class="sample-actions"><button type="button">Read example</button><a href="./samples/dutch-auctions.pdf" download>Download file</a></div><small><a href="https://doi.org/10.1186/s41235-020-00259-w">Bennett et al. (2020)</a> · <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a></small></article>
+        <article class="sample-card" data-sample="grin-readme.md"><span class="format">Markdown</span><h3>GRIN project guide</h3><p>Technical Markdown from an open research project.</p><div class="sample-actions"><button type="button">Read example</button><a href="./samples/grin-readme.md" download>Download file</a></div><small><a href="https://github.com/MurraySBennett/grin">GRIN repository</a> · <a href="https://github.com/MurraySBennett/grin/blob/main/LICENSE">MIT</a></small></article>
+      </div></details>
+    </section>
+    <section class="keep-app" aria-labelledby="keep-title"><span class="eyebrow">Keep reading</span><h2 id="keep-title">Keep Paragraph Reader</h2><p>Install the browser app for offline use, or download a desktop copy. Notes can be stored separately in different browsers and copies; use a backup when switching.</p><div class="keep-actions"><button id="install-app" type="button">Install on this device</button><a id="download-copy" class="button" href="./dist/paragraph-reader-2026-11-07.zip" download>Download offline copy · 2026-11-07</a><a href="https://github.com/MurraySBennett/paragraph-reader">View source on GitHub</a></div><details class="clone-help"><summary>Clone source for development</summary><code>git clone https://github.com/MurraySBennett/paragraph-reader.git</code></details><p id="install-guidance" class="muted small" role="status"></p></section>
   </section>
 
   <main id="reader-shell" hidden>

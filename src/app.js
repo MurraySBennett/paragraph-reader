@@ -9,12 +9,21 @@ import { parseTex } from './tex.js';
 
 const $ = id => document.getElementById(id);
 const setup = $('setup'), shell = $('reader-shell'), card = $('paragraph'), note = $('note');
+const memoryItems = new Map();
+const memoryStorage = { get length() { return memoryItems.size; }, key: index => [...memoryItems.keys()][index] ?? null, getItem: key => memoryItems.get(key) ?? null, setItem: (key, value) => memoryItems.set(key, String(value)), removeItem: key => memoryItems.delete(key) };
+let storage = memoryStorage, persistentStorage = false;
+try {
+  storage = window.localStorage;
+  const probe = 'paragraph-reader:storage-probe';
+  storage.setItem(probe, '1'); storage.removeItem(probe);
+  persistentStorage = true;
+} catch { storage = memoryStorage; }
 let doc = null, paragraphs = [], paragraphHashes = [], chunks = [], chunkIndex = 0, noteAnchor = null, wordSourceAnchor = null, saveTimer = 0, toastTimer = 0, recoveryDocs = [];
 const PREF_KEY = 'paragraph-reader:preferences:v2';
 const defaults = { unit: 'paragraph', notes: true, theme: 'system', fontFamily: 'serif-classic', fontSize: 20, lineHeight: 1.7, textWidth: 64, pageWords: 250, wordWpm: 300, notesWidth: 34, editorHeight: 240, customBg: '#f8f5ef', customText: '#202327', customAccent: '#345f68' };
 const fontStacks = { 'serif-classic': 'Iowan Old Style, Palatino Linotype, Palatino, Georgia, serif', 'serif-literary': 'Georgia, Cambria, Times New Roman, serif', 'sans-system': 'system-ui, -apple-system, Segoe UI, sans-serif', 'sans-humanist': 'Trebuchet MS, Gill Sans, Segoe UI, sans-serif', opendyslexic: 'OpenDyslexic, system-ui, sans-serif' };
 let prefs = { ...defaults };
-try { const saved = JSON.parse(localStorage.getItem(PREF_KEY) || '{}'); if (validPreferences(saved)) prefs = { ...defaults, ...saved }; } catch {}
+try { const saved = JSON.parse(storage.getItem(PREF_KEY) || '{}'); if (validPreferences(saved)) prefs = { ...defaults, ...saved }; } catch {}
 
 function status(message, error = false) {
   const el = $('toast');
@@ -25,7 +34,7 @@ function status(message, error = false) {
   toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
 }
 
-function savePrefs() { try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch { status('Settings could not be saved in this browser.', true); } }
+function savePrefs() { try { storage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch { status('Settings could not be saved in this browser.', true); } }
 
 function applyPrefs() {
   document.body.dataset.theme = prefs.theme;
@@ -65,7 +74,7 @@ function saveDoc() {
   if (!doc) return;
   clearTimeout(saveTimer);
   doc.updated = new Date().toISOString();
-  try { saveDocument(localStorage, doc); } catch { status('Could not save this document. Download a backup.', true); }
+  try { saveDocument(storage, doc); } catch { status('Could not save this document. Download a backup.', true); }
 }
 
 function renderNotes() {
@@ -115,10 +124,10 @@ async function openDocument(text, name = 'Pasted text', preparedAlready = false,
   const prepared = preparedAlready ? text : prepareText(text, name);
   try {
     const nextDoc = await createDocument(name, prepared, blocks);
-    const saved = loadDocument(localStorage, nextDoc.id);
+    const saved = loadDocument(storage, nextDoc.id);
     doc = saved && saved.text === nextDoc.text ? (blocks && saved.version === 2 ? { ...saved, version: 3, blocks } : saved) : nextDoc;
     paragraphs = doc.version === 3 ? doc.blocks.map(block => block.text) : splitParagraphs(doc.text);
-    recoveryDocs = findRecoverableDocuments(localStorage, doc.name, doc.id);
+    recoveryDocs = findRecoverableDocuments(storage, doc.name, doc.id);
     $('earlier-notes').hidden = recoveryDocs.length === 0;
     noteAnchor = null;
     paragraphHashes = await Promise.all(paragraphs.map(fingerprint));
@@ -150,6 +159,26 @@ $('file').addEventListener('change', async event => {
   } catch (error) { $('setup-status').textContent = error.message || 'Could not open that file.'; }
   event.target.value = '';
 });
+document.querySelectorAll('[data-sample]').forEach(sample => sample.querySelector('button').addEventListener('click', async () => {
+  const name = sample.dataset.sample;
+  const button = sample.querySelector('button');
+  button.disabled = true;
+  $('setup-status').textContent = `Opening ${name}…`;
+  try {
+    let blob;
+    if (location.protocol === 'file:' && globalThis.__PARAGRAPH_SAMPLES__?.[name]) {
+      const bytes = Uint8Array.from(atob(globalThis.__PARAGRAPH_SAMPLES__[name]), char => char.charCodeAt(0));
+      blob = new Blob([bytes]);
+    } else {
+      const response = await fetch(`./samples/${encodeURIComponent(name)}`);
+      if (!response.ok) throw new Error(`Could not load ${name}. Try downloading it and opening the file.`);
+      blob = await response.blob();
+    }
+    const file = new File([blob], name, { type: blob.type });
+    if (await openImportedFile(file)) $('setup-status').textContent = '';
+  } catch (error) { $('setup-status').textContent = error.message || `Could not open ${name}.`; }
+  finally { button.disabled = false; }
+}));
 $('previous').addEventListener('click', () => move(-1));
 $('next').addEventListener('click', () => move(1));
 $('read-focus').addEventListener('click', () => card.focus());
@@ -327,3 +356,29 @@ if (boot.textContent.trim()) {
   openDocument(parsed?.text ?? text, source, true, parsed?.blocks ?? null);
 }
 window.addEventListener('pagehide', saveDoc);
+
+let installPrompt = null;
+const installed = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+if (installed) $('install-app').hidden = true;
+if (location.protocol === 'file:') $('install-app').hidden = true;
+if (location.protocol === 'file:') $('download-copy').hidden = true;
+if (!persistentStorage) $('install-guidance').textContent = 'This browser cannot keep notes for this copy. Download a backup before closing it.';
+window.addEventListener('beforeinstallprompt', event => { event.preventDefault(); installPrompt = event; });
+window.addEventListener('appinstalled', () => { installPrompt = null; $('install-app').hidden = true; $('install-guidance').textContent = 'Installed. Your notes remain in this browser; keep a backup when switching copies.'; });
+$('install-app').addEventListener('click', async () => {
+  if (installPrompt) {
+    const prompt = installPrompt;
+    installPrompt = null;
+    const choice = await prompt.prompt();
+    $('install-guidance').textContent = choice.outcome === 'accepted' ? 'Installation started.' : 'You can install later from your browser menu.';
+    return;
+  }
+  const appleMobile = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  $('install-guidance').textContent = appleMobile
+    ? 'On iPhone or iPad, open the browser Share menu and choose Add to Home Screen.'
+    : 'Use your browser’s Install or Add to Dock command, or download the desktop copy below.';
+});
+if (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+  const appScript = document.querySelector('script[src$="app.js"]');
+  if (appScript && 'serviceWorker' in navigator) navigator.serviceWorker.register(new URL('./sw.js', appScript.src), { updateViaCache: 'none' }).catch(() => {});
+}

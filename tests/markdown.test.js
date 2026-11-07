@@ -16,3 +16,10 @@ test('Markdown does not create executable markup or unsafe links', () => {
   assert.equal(parsed.blocks[0].runs.some(run => run.href?.startsWith('javascript:')), false);
   assert.equal(parsed.blocks[0].text.includes('alert(2)'), true);
 });
+
+test('outer list resumes after a nested list', () => {
+  const parsed = parseMarkdown('- outer one\n  - inner\n- outer two');
+  assert.deepEqual(parsed.blocks.map(block => [block.kind, block.listType]), [
+    ['list-item', 'unordered'], ['list-item', 'unordered'], ['list-item', 'unordered'],
+  ]);
+});

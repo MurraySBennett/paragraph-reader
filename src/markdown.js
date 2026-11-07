@@ -40,23 +40,23 @@ export function inlineRuns(tokens) {
 export function parseMarkdown(text, name = 'Markdown') {
   const tokens = parser.parse(String(text ?? ''), {});
   const blocks = [];
-  let kind = 'paragraph', level, listType, inList = null;
+  let kind = 'paragraph', level;
+  const listStack = [];
   for (const token of tokens) {
     if (token.type === 'heading_open') { kind = 'heading'; level = Number(token.tag.slice(1)); }
-    else if (token.type === 'paragraph_open') kind = inList ? 'list-item' : 'paragraph';
-    else if (token.type === 'bullet_list_open') inList = 'unordered';
-    else if (token.type === 'ordered_list_open') inList = 'ordered';
-    else if (token.type === 'bullet_list_close' || token.type === 'ordered_list_close') inList = null;
+    else if (token.type === 'paragraph_open') kind = listStack.length ? 'list-item' : 'paragraph';
+    else if (token.type === 'bullet_list_open') listStack.push('unordered');
+    else if (token.type === 'ordered_list_open') listStack.push('ordered');
+    else if (token.type === 'bullet_list_close' || token.type === 'ordered_list_close') listStack.pop();
     else if (token.type === 'inline') {
       const runs = inlineRuns(token.children);
       const visible = runs.map(run => run.text).join('');
-      if (visible) blocks.push({ kind, text: visible, runs, ...(kind === 'heading' ? { level } : {}), ...(kind === 'list-item' ? { listType: inList || listType || 'unordered' } : {}) });
+      if (visible) blocks.push({ kind, text: visible, runs, ...(kind === 'heading' ? { level } : {}), ...(kind === 'list-item' ? { listType: listStack.at(-1) || 'unordered' } : {}) });
     }
     else if (token.type === 'fence' || token.type === 'code_block') {
       const visible = token.content.trim();
       if (visible) blocks.push({ kind: 'paragraph', text: visible, runs: [{ text: visible, bold: false, italic: false, href: null }] });
     }
-    if (inList) listType = inList;
   }
   return finishPassages(name, blocks);
 }
