@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Paragraph Reader</title>
+  <link rel="stylesheet" href="./src/styles.css">
+</head>
+<body data-theme="system">
+  <section id="setup" class="setup">
+    <div class="intro">
+      <div class="eyebrow">A quieter way to read</div>
+      <h1>Paragraph Reader</h1>
+      <p>Take text one piece at a time. Keep notes when you want them. Your reading stays in this browser.</p>
+    </div>
+    <label for="input">Paste text</label>
+    <textarea id="input" aria-label="Paste text" placeholder="Paste an article, draft, or passage here…"></textarea>
+    <div class="setup-actions">
+      <label class="button file-button">Open a file<input id="file" type="file" accept=".txt,.md,.markdown,.tex,.ltx,.pdf,text/plain,text/markdown,application/pdf"></label>
+      <button id="start" class="primary">Start reading <span aria-hidden="true">→</span></button>
+    </div>
+    <p class="muted small">Text, Markdown, TeX, and text-based PDF. Files are processed on this device.</p>
+    <p id="setup-status" role="status"></p>
+  </section>
+
+  <main id="reader-shell" hidden>
+    <header class="toolbar">
+      <div class="brand"><span class="brand-mark">¶</span><span>Paragraph Reader</span></div>
+      <div class="document-meta"><strong id="document-name"></strong><span id="progress"></span></div>
+      <div class="toolbar-actions">
+        <label class="unit-label">Read by <select id="unit" aria-label="Reading unit"><option value="paragraph">Paragraph</option><option value="sentence">Sentence</option><option value="page">Page</option></select></label>
+        <button id="notes-toggle" type="button" aria-pressed="true">Hide notes</button>
+        <button id="appearance-open" type="button">Appearance</button>
+        <button id="utilities-open" type="button" aria-expanded="false" aria-controls="utilities">Utilities</button>
+      </div>
+    </header>
+    <div id="utilities" class="utilities" hidden>
+      <button id="export-notes" type="button">Download notes</button>
+      <button id="export-backup" type="button">Download backup</button>
+      <label class="button file-button">Restore backup<input id="import-backup" type="file" accept=".json,application/json"></label>
+      <button id="new-document" type="button">New document</button>
+      <button id="shortcut-help" type="button">Keyboard shortcuts</button>
+    </div>
+    <div id="app" class="app-grid">
+      <section id="read-pane" class="read-pane">
+        <div class="reader-heading"><span id="chunk-label"></span><button id="read-focus" type="button">Focus reader</button></div>
+        <div id="paragraph" class="reading-card" tabindex="0" role="region" aria-label="Reader text"><h2 id="chunk-text"></h2></div>
+        <div class="reader-bottom">
+          <button id="previous" type="button" aria-label="Previous chunk">← Previous</button>
+          <button id="word-start" type="button" class="primary">Read words <span aria-hidden="true">▶</span></button>
+          <button id="next" type="button" aria-label="Next chunk">Next →</button>
+        </div>
+      </section>
+      <div id="pane-resizer" class="pane-resizer" role="separator" aria-label="Resize notes panel" aria-orientation="vertical" tabindex="0" aria-valuemin="20" aria-valuemax="65" aria-valuenow="34"></div>
+      <aside id="note-pane" class="note-pane" aria-label="Notes">
+        <div class="note-heading"><div><span class="eyebrow">Working notes</span><h2 id="note-title">Notes</h2></div><button id="reset-layout" type="button">Reset layout</button></div>
+        <textarea id="note" aria-label="Note for current paragraph" placeholder="A question, an idea, a line to revisit…"></textarea>
+        <div id="note-resizer" class="note-resizer" role="separator" aria-label="Resize note editor" aria-orientation="horizontal" tabindex="0" aria-valuemin="120" aria-valuemax="600" aria-valuenow="240"></div>
+        <div class="note-list-heading"><span>Notes in this document</span><span id="note-count">0</span></div>
+        <div id="note-index" class="note-index"></div>
+      </aside>
+    </div>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </main>
+
+  <dialog id="appearance" aria-labelledby="appearance-title">
+    <div class="dialog-head"><h2 id="appearance-title">Appearance</h2><button id="appearance-close" type="button" aria-label="Close appearance">×</button></div>
+    <label>Theme <select id="theme" aria-label="Theme"><option value="system">System</option><option value="paper">Paper</option><option value="warm">Warm paper</option><option value="slate">Slate</option><option value="night">Night</option><option value="contrast">High contrast</option><option value="custom">Custom</option></select></label>
+    <div id="custom-colors" hidden><label>Background <input id="custom-bg" type="color" value="#f8f5ef"></label><label>Text <input id="custom-text" type="color" value="#202327"></label><label>Accent <input id="custom-accent" type="color" value="#345f68"></label></div>
+    <label>Font size <input id="font-size" aria-label="Font size" type="range" min="16" max="32" value="20"><output id="font-size-value">20 px</output></label>
+    <label>Line spacing <input id="line-height" type="range" min="1.3" max="2.2" step="0.1" value="1.7"><output id="line-height-value">1.7</output></label>
+    <label>Text width <input id="text-width" type="range" min="35" max="85" value="64"><output id="text-width-value">64 ch</output></label>
+    <label>Page length <input id="page-words" type="number" min="50" max="1000" step="25" value="250"> words</label>
+  </dialog>
+
+  <dialog id="shortcuts" aria-labelledby="shortcuts-title"><div class="dialog-head"><h2 id="shortcuts-title">Keyboard shortcuts</h2><button id="shortcuts-close" type="button" aria-label="Close keyboard shortcuts">×</button></div><p><kbd>←</kbd> and <kbd>→</kbd> move between chunks. <kbd>N</kbd> focuses notes. <kbd>Esc</kbd> returns to reading. Shortcuts pause while you type in a field.</p></dialog>
+
+  <div id="word-mode" class="word-mode" hidden role="dialog" aria-modal="true" aria-label="Word reader">
+    <div class="word-top"><button id="word-exit" type="button">← Back to reading</button><span id="word-progress"></span></div>
+    <div id="word-display" class="word-display" aria-live="off"></div>
+    <div class="word-controls"><button id="word-play" type="button">Pause</button><label>Speed <input id="word-speed" aria-label="Words per minute" type="range" min="100" max="800" step="25" value="300"><output id="word-speed-value">300 WPM</output></label></div>
+  </div>
+  <script id="boot-text" type="text/plain" data-source=""></script>
+  <script type="module" src="./src/app.js"></script>
+</body>
+</html>
