@@ -8,7 +8,7 @@ const preferenceRules = {
   theme: value => ['system', 'paper', 'warm', 'slate', 'night', 'contrast', 'custom'].includes(value),
   fontSize: value => Number.isInteger(value) && value >= 16 && value <= 32,
   lineHeight: value => typeof value === 'number' && Number.isFinite(value) && value >= 1.3 && value <= 2.2,
-  textWidth: value => Number.isInteger(value) && value >= 35 && value <= 85,
+  textWidth: value => Number.isInteger(value) && value >= 35 && value <= 130,
   pageWords: value => Number.isInteger(value) && value >= 50 && value <= 1000,
   wordWpm: value => Number.isInteger(value) && value >= 100 && value <= 800,
   wordSegment: value => ['sentence', 'paragraph'].includes(value),

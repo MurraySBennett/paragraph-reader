@@ -20,10 +20,10 @@ try {
 } catch { storage = memoryStorage; }
 let doc = null, paragraphs = [], paragraphHashes = [], chunks = [], chunkIndex = 0, noteAnchor = null, wordSourceAnchor = null, wordScopeText = '', saveTimer = 0, toastTimer = 0, recoveryDocs = [];
 const PREF_KEY = 'paragraph-reader:preferences:v2';
-const defaults = { unit: 'paragraph', notes: true, theme: 'system', fontFamily: 'serif-classic', fontSize: 20, lineHeight: 1.7, textWidth: 64, pageWords: 250, wordWpm: 300, wordSegment: 'sentence', notesWidth: 34, editorHeight: 240, customBg: '#f8f5ef', customText: '#202327', customAccent: '#345f68' };
+const defaults = { unit: 'paragraph', notes: true, theme: 'system', fontFamily: 'serif-classic', fontSize: 20, lineHeight: 1.7, textWidth: 100, pageWords: 250, wordWpm: 300, wordSegment: 'sentence', notesWidth: 34, editorHeight: 240, customBg: '#f8f5ef', customText: '#202327', customAccent: '#345f68' };
 const fontStacks = { 'serif-classic': 'Iowan Old Style, Palatino Linotype, Palatino, Georgia, serif', 'serif-literary': 'Georgia, Cambria, Times New Roman, serif', 'sans-system': 'system-ui, -apple-system, Segoe UI, sans-serif', 'sans-humanist': 'Trebuchet MS, Gill Sans, Segoe UI, sans-serif', opendyslexic: 'OpenDyslexic, system-ui, sans-serif' };
 let prefs = { ...defaults };
-try { const saved = JSON.parse(storage.getItem(PREF_KEY) || '{}'); if (validPreferences(saved)) prefs = { ...defaults, ...saved }; } catch {}
+try { const saved = JSON.parse(storage.getItem(PREF_KEY) || '{}'); if (validPreferences(saved)) prefs = { ...defaults, ...saved, textWidth: saved.textWidth === 64 ? defaults.textWidth : (saved.textWidth ?? defaults.textWidth) }; } catch {}
 
 function status(message, error = false) {
   const el = $('toast');
