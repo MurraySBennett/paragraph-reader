@@ -60,6 +60,15 @@ test('new readers get After Hours and can switch themes before opening a file', 
   await expect(page.locator('body')).toHaveAttribute('data-theme', 'newcastle');
 });
 
+test('saved appearance choices remain in place after the new defaults', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('paragraph-reader:preferences:v2', JSON.stringify({ theme: 'system', fontFamily: 'serif-classic' })));
+  await page.goto('/');
+  await expect(page.locator('body')).toHaveAttribute('data-theme', 'system');
+  await page.getByRole('button', { name: 'Appearance' }).click();
+  await page.getByRole('tab', { name: 'Typography' }).click();
+  await expect(page.getByLabel('Reader font')).toHaveValue('serif-classic');
+});
+
 test('compact layout and campus colors cover home, reader, dialog, and word mode', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
@@ -74,6 +83,17 @@ test('compact layout and campus colors cover home, reader, dialog, and word mode
   await expect(page.locator('#paragraph')).toHaveCSS('background-color', 'rgb(13, 46, 83)');
   await page.getByRole('button', { name: 'Read words' }).click();
   await expect(page.getByRole('dialog', { name: 'Word reader' })).toHaveCSS('background-color', 'rgb(3, 32, 68)');
+});
+
+test('mobile reader keeps its name and controls visible without horizontal overflow', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await page.getByLabel('Paste text').fill('A short reading.');
+  await page.getByRole('button', { name: 'Start reading' }).click();
+  await expect(page.locator('.toolbar .brand')).toContainText('Paragraph Reader');
+  await expect(page.locator('.toolbar .brand span').last()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Appearance' })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 });
 
 test('selected words play and return to their paragraph with notes', async ({ page }) => {

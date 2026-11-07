@@ -13,9 +13,8 @@
   <section id="setup" class="setup">
     <div class="setup-top"><strong>Paragraph Reader</strong><button id="setup-appearance" type="button">Appearance</button></div>
     <div class="intro">
-      <div class="eyebrow">A quieter way to read</div>
-      <h1>Paragraph Reader</h1>
-      <p>Take text one piece at a time. Keep notes when you want them. Your reading stays in this browser.</p>
+      <h1>Read at your own pace.</h1>
+      <p>Bring a document, move through it a piece at a time, and keep notes where they belong. Your reading stays in this browser.</p>
     </div>
     <label for="input">Paste text</label>
     <textarea id="input" aria-label="Paste text" placeholder="Paste an article, draft, or passage here…"></textarea>
@@ -27,7 +26,7 @@
     <p class="muted small">Text, Markdown, TeX, DOCX, and text-based PDF. Files are processed on this device.</p>
     <p id="setup-status" role="status"></p>
     <section class="examples" aria-labelledby="examples-title">
-      <div class="section-head"><div><span class="eyebrow">Start with a sample</span><h2 id="examples-title">Try an example</h2></div></div>
+      <div class="section-head"><h2 id="examples-title">Try a reading</h2></div>
       <div class="sample-grid">
         <article class="sample-card" data-sample="rainbow-passage.txt"><span class="format">TXT</span><h3>Rainbow Passage</h3><p>A short classic for a quick first read.</p><div class="sample-actions"><button type="button">Read example</button><a href="./samples/rainbow-passage.txt" download>Download file</a></div><small>Grant Fairbanks · <a href="https://www.dialectsarchive.com/the-rainbow-passage">public domain source</a></small></article>
         <article class="sample-card" data-sample="human-machine-teams.tex"><span class="format">TeX</span><h3>Human–machine teams</h3><p>A research methods excerpt in source form.</p><div class="sample-actions"><button type="button">Read example</button><a href="./samples/human-machine-teams.tex" download>Download file</a></div><small>Adapted from <a href="https://doi.org/10.1111/tops.12683">Bennett et al.</a> · <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a></small></article>
@@ -39,7 +38,7 @@
         <article class="sample-card" data-sample="grin-readme.md"><span class="format">Markdown</span><h3>GRIN project guide</h3><p>Technical Markdown from an open research project.</p><div class="sample-actions"><button type="button">Read example</button><a href="./samples/grin-readme.md" download>Download file</a></div><small><a href="https://github.com/MurraySBennett/grin">GRIN repository</a> · <a href="https://github.com/MurraySBennett/grin/blob/main/LICENSE">MIT</a></small></article>
       </div></details>
     </section>
-    <section class="keep-app" aria-labelledby="keep-title"><span class="eyebrow">Keep reading</span><h2 id="keep-title">Keep Paragraph Reader</h2><p>Install the browser app for offline use, or download a desktop copy. Notes can be stored separately in different browsers and copies; use a backup when switching.</p><div class="keep-actions"><button id="install-app" type="button">Install on this device</button><a id="download-copy" class="button" href="./dist/paragraph-reader-2026-11-07.zip" download>Download offline copy · 2026-11-07</a><a href="https://github.com/MurraySBennett/paragraph-reader">View source on GitHub</a></div><details class="clone-help"><summary>Clone source for development</summary><code>git clone https://github.com/MurraySBennett/paragraph-reader.git</code></details><p id="install-guidance" class="muted small" role="status"></p></section>
+    <section class="keep-app" aria-labelledby="keep-title"><h2 id="keep-title">Keep Paragraph Reader</h2><p>Install the browser app for offline use, or download a desktop copy. Notes can be stored separately in different browsers and copies; use a backup when switching.</p><div class="keep-actions"><button id="install-app" type="button">Install on this device</button><a id="download-copy" class="button" href="./dist/paragraph-reader-2026-11-07.zip" download>Download offline copy · 2026-11-07</a><a href="https://github.com/MurraySBennett/paragraph-reader">View source on GitHub</a></div><details class="clone-help"><summary>Clone source for development</summary><code>git clone https://github.com/MurraySBennett/paragraph-reader.git</code></details><p id="install-guidance" class="muted small" role="status"></p></section>
   </section>
 
   <main id="reader-shell" hidden>
@@ -73,7 +72,7 @@
       </section>
       <div id="pane-resizer" class="pane-resizer" role="separator" aria-label="Resize notes panel" aria-orientation="vertical" tabindex="0" aria-valuemin="20" aria-valuemax="65" aria-valuenow="34"></div>
       <aside id="note-pane" class="note-pane" aria-label="Notes">
-        <div class="note-heading"><div><span class="eyebrow">Working notes</span><h2 id="note-title">Notes</h2></div><button id="reset-layout" type="button">Reset layout</button></div>
+        <div class="note-heading"><h2 id="note-title">Notes</h2><button id="reset-layout" type="button">Reset layout</button></div>
         <textarea id="note" aria-label="Note for current paragraph" placeholder="A question, an idea, a line to revisit…"></textarea>
         <div id="note-resizer" class="note-resizer" role="separator" aria-label="Resize note editor" aria-orientation="horizontal" tabindex="0" aria-valuemin="120" aria-valuemax="600" aria-valuenow="240"></div>
         <div class="note-list-heading"><span>Notes in this document</span><span id="note-count">0</span></div>
