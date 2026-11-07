@@ -6,8 +6,8 @@ Keep Paragraph Reader's one-chunk reading flow while carrying visible structure 
 
 ## Scope and user decisions
 
-- Existing browser inputs remain: pasted plain text; `.txt`, `.md`/`.markdown`, `.tex`/`.ltx`, and text-based `.pdf` files. Existing CLI input types remain. DOCX, web-page import, OCR, and new source types are outside this change.
-- Markdown and simple TeX carry explicit bold/italic, heading, list, and link semantics into a common model. Plain text remains plain. PDF stays text-first: preserve extracted text and page order, but do not invent semantic marks from font names or geometry. The UI and README make the PDF limitation clear.
+- Existing browser inputs remain: pasted plain text; `.txt`, `.md`/`.markdown`, `.tex`/`.ltx`, and text-based `.pdf` files. Add local `.docx` browser import. Existing CLI input types remain. Legacy `.doc` is not parsed; choosing one explains how to save or convert it to `.docx` locally. Web-page import, OCR, and other new source types are outside this change.
+- Markdown, simple TeX, and DOCX carry explicit bold/italic, heading, list, and link semantics into a common model. Plain text remains plain. PDF stays text-first: preserve extracted text and page order, but do not invent semantic marks from font names or geometry. The UI and README make the PDF limitation clear.
 - Pasted text stays plain text, even if it contains Markdown-looking symbols. An explicit Markdown paste mode can be considered later; do not silently reinterpret pasted text.
 - Formatting is shown in paragraph, sentence, and page reading units. The reader still presents one chunk at a time and keeps notes anchored to source paragraphs. Word playback strips presentation and uses the same visible words in the same order.
 - Appearance adds a font-family control in Typography with at least two serif choices, two sans-serif choices, and a self-hosted OpenDyslexic choice. The current serif stack stays the default. The chosen font applies to reader chunks and word mode, not notes or UI controls. Existing font size, line spacing, and width settings remain independent. The menu names fonts, without suggesting a therapeutic benefit.
@@ -24,6 +24,8 @@ Keep Paragraph Reader's one-chunk reading flow while carrying visible structure 
 - **TXT and paste:** no formatting interpretation. Existing paragraph splitting remains.
 - **Markdown:** recognise headings, paragraph text, ordered/unordered lists, strong/emphasis, and ordinary links. Preserve nested emphasis where possible. Use a maintained Markdown parser or a small proven subset parser, but disable arbitrary HTML and images; raw HTML is displayed as text or stripped according to the parser's safe-text mode, never executed. Unsupported constructs keep readable text rather than raw control syntax when feasible. Link text remains in word playback.
 - **TeX:** preserve the simple commands already accepted: section/subsection heading levels, `itemize`/`enumerate` items, `\textbf{}`, `\textit{}`/`\emph{}`, and `\href{url}{label}`/`\url{url}`. Other TeX constructs continue best-effort text extraction. The browser and CLI must share equivalent formatting results for the same simple TeX input; avoid a separate divergent stripper for rich content.
+- **DOCX:** convert locally in the browser from the uploaded file's bytes to semantic structure (for example, a DOCX-to-HTML library followed by a strict allowlist-to-passages conversion). Keep headings, paragraphs, lists, bold/italic, and safe links. Do not inject converter output as HTML or load embedded/external media; ignore unsupported layout, tables, images, comments, and footnotes while retaining readable text where practical. Reject corrupt, encrypted, oversized, or unsupported files with a useful message and leave the current document untouched. The exact file-size limit is a builder call.
+- **Legacy DOC:** detect `.doc` and explain that the older binary format must be saved as `.docx` in Word or LibreOffice before local import. Do not offer a misleading partial text extraction path. The CLI retains its existing accepted formats and likewise gives a clear `.doc`/`.docx` unsupported message until a separate CLI design is approved.
 - **PDF:** PDF.js text extraction stays local. It does not reliably identify semantic headings, lists, bold or italic, so the first release shows plain text and uses page breaks only as extraction boundaries. No promise of source-layout fidelity.
 
 ## Saved state and compatibility
@@ -47,7 +49,7 @@ Keep Paragraph Reader's one-chunk reading flow while carrying visible structure 
 
 ## Checks for the implementation plan
 
-- Markdown and TeX fixtures with nested bold/italic, headings, lists, links, and untrusted markup render correctly without script execution.
+- Markdown, TeX, and DOCX fixtures with nested bold/italic, headings, lists, links, and untrusted markup render correctly without script execution. DOCX corrupt/oversized inputs and `.doc` inputs show actionable errors without altering the open document.
 - Plain text, PDF, and old v2 backups retain readable text and notes. A changed import never silently reattaches notes.
 - Sentence/page chunking and selected-passage playback preserve visible text order and the correct note anchor across formatting nodes.
 - Font choices persist, restore from backup, fall back cleanly, and work in both hosted and CLI builds. Test with keyboard and screen reader semantics plus the existing browser accessibility scan.
@@ -55,4 +57,4 @@ Keep Paragraph Reader's one-chunk reading flow while carrying visible structure 
 
 ## Builder calls left open
 
-- Choose specific parser dependencies, parser subset boundaries, font files/fallback stacks, and the smallest legacy-note recovery UI during planning. Validate their licenses and update the vendored notices.
+- Choose specific parser dependencies, parser subset boundaries, DOCX size limit, font files/fallback stacks, and the smallest legacy-note recovery UI during planning. Validate their licenses and update the vendored notices.
