@@ -52,8 +52,10 @@ test('selected words play and return to their paragraph with notes', async ({ pa
   await page.locator('#chunk-text').evaluate(el => { const text = el.querySelector('p').firstChild; const range = document.createRange(); range.setStart(text, 0); range.setEnd(text, 16); const selection = getSelection(); selection.removeAllRanges(); selection.addRange(range); });
   await page.getByRole('button', { name: 'Read words' }).click();
   await expect(page.getByRole('dialog', { name: 'Word reader' })).toBeVisible();
+  await page.getByRole('button', { name: 'Start', exact: true }).click();
   await page.getByLabel('Words per minute').fill('800');
-  await expect(page.getByRole('dialog', { name: 'Word reader' })).toBeHidden({ timeout: 5000 });
+  await expect(page.getByRole('button', { name: 'Next segment' })).toBeDisabled({ timeout: 5000 });
+  await page.getByRole('button', { name: 'Back to reading' }).click();
   await expect(page.locator('#chunk-text')).toContainText('Alpha beta gamma delta.');
   await expect(page.getByLabel('Note for current paragraph')).toBeVisible();
 });
@@ -120,12 +122,98 @@ test('selected passage in a page returns notes to its source paragraph', async (
   await page.getByLabel('Reading unit').selectOption('page');
   await page.locator('#chunk-text').evaluate(el => { const text = el.querySelectorAll('p')[1].firstChild; const range = document.createRange(); range.setStart(text, 0); range.setEnd(text, 6); const selection = getSelection(); selection.removeAllRanges(); selection.addRange(range); });
   await page.getByRole('button', { name: 'Read words' }).click();
-  await expect(page.getByRole('dialog', { name: 'Word reader' })).toBeHidden({ timeout: 5000 });
+  await page.getByRole('button', { name: 'Start', exact: true }).click();
+  await page.getByRole('button', { name: 'Back to reading' }).click();
   await expect(page.locator('#note-title')).toHaveText('Paragraph 2');
   await page.getByLabel('Note for current paragraph').fill('About second');
   await page.getByLabel('Reading unit').selectOption('paragraph');
   await page.getByRole('button', { name: 'Next chunk' }).click();
   await expect(page.getByLabel('Note for current paragraph')).toHaveValue('About second');
+});
+
+test('word mode opens paused and waits for N between sentences', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel('Paste text').fill('First sentence. Second sentence.\n\nThird paragraph.');
+  await page.getByRole('button', { name: 'Start reading' }).click();
+  await page.getByRole('button', { name: 'Read words' }).click();
+  await expect(page.getByRole('button', { name: 'Start', exact: true })).toBeVisible();
+  await expect(page.locator('#word-display')).toBeEmpty();
+  await expect(page.getByLabel('Word segment')).toHaveValue('sentence');
+  await page.getByLabel('Words per minute').fill('100');
+  await page.getByRole('button', { name: 'Start', exact: true }).click();
+  await expect(page.locator('#word-progress')).toContainText('Segment 1 of 3');
+  await expect(page.locator('#word-progress')).toContainText('1 / 2 words');
+  await page.getByLabel('Words per minute').fill('800');
+  await expect(page.getByRole('button', { name: 'Next segment' })).toBeEnabled({ timeout: 3000 });
+  await page.keyboard.press('n');
+  await expect(page.locator('#word-progress')).toContainText('Segment 2 of 3');
+  await expect(page.getByRole('button', { name: 'Next segment' })).toBeEnabled({ timeout: 3000 });
+  await page.getByRole('button', { name: 'Next segment' }).click();
+  await expect(page.locator('#word-progress')).toContainText('Segment 3 of 3');
+  await expect(page.getByRole('button', { name: 'Next segment' })).toBeDisabled({ timeout: 3000 });
+  await expect(page.getByRole('dialog', { name: 'Word reader' })).toBeVisible();
+});
+
+test('word mode pauses, resumes and remembers paragraph segments', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel('Paste text').fill('One two three four.\n\nFive six.');
+  await page.getByRole('button', { name: 'Start reading' }).click();
+  await page.getByRole('button', { name: 'Read words' }).click();
+  await page.getByLabel('Word segment').selectOption('paragraph');
+  await page.getByLabel('Words per minute').fill('100');
+  await page.getByRole('button', { name: 'Start', exact: true }).click();
+  await page.getByRole('button', { name: 'Pause' }).click();
+  const word = await page.locator('#word-display').textContent();
+  await page.waitForTimeout(700);
+  await expect(page.locator('#word-display')).toHaveText(word);
+  await page.getByRole('button', { name: 'Resume' }).click();
+  await expect(page.getByRole('button', { name: 'Next segment' })).toBeEnabled({ timeout: 5000 });
+  await page.getByRole('button', { name: 'Next segment' }).click();
+  await expect(page.locator('#word-progress')).toContainText('Segment 2 of 2');
+  await page.getByRole('button', { name: 'Back to reading' }).click();
+  await page.getByRole('button', { name: 'Read words' }).click();
+  await expect(page.getByLabel('Word segment')).toHaveValue('paragraph');
+  await expect(page.getByRole('button', { name: 'Start', exact: true })).toBeVisible();
+});
+
+test('word mode starts at the current sentence and changing segment choice resets it paused', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel('Paste text').fill('First. Second.\n\nThird.');
+  await page.getByRole('button', { name: 'Start reading' }).click();
+  await page.getByLabel('Reading unit').selectOption('sentence');
+  await page.getByRole('button', { name: 'Next chunk' }).click();
+  await page.getByRole('button', { name: 'Read words' }).click();
+  await expect(page.locator('#word-progress')).toContainText('Segment 1 of 2');
+  await page.getByRole('button', { name: 'Start', exact: true }).click();
+  await expect(page.locator('#word-display')).toHaveText('Second.');
+  await page.getByLabel('Word segment').selectOption('paragraph');
+  await expect(page.getByRole('button', { name: 'Start', exact: true })).toBeVisible();
+  await expect(page.locator('#word-display')).toBeEmpty();
+  await expect(page.locator('#word-progress')).toContainText('Segment 1 of 2');
+});
+
+test('selected paragraphs bound word mode and retain paragraph segmentation', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel('Paste text').fill('First selected.\n\nSecond selected.\n\nThird outside.');
+  await page.getByRole('button', { name: 'Start reading' }).click();
+  await page.getByLabel('Reading unit').selectOption('page');
+  await page.locator('#chunk-text').evaluate(el => {
+    const parts = el.querySelectorAll('p');
+    const range = document.createRange();
+    range.setStart(parts[0].firstChild, 0);
+    range.setEnd(parts[1].firstChild, parts[1].textContent.length);
+    getSelection().removeAllRanges(); getSelection().addRange(range);
+  });
+  await page.getByRole('button', { name: 'Read words' }).click();
+  await page.getByLabel('Word segment').selectOption('paragraph');
+  await expect(page.locator('#word-progress')).toContainText('Segment 1 of 2');
+  await page.getByLabel('Words per minute').fill('800');
+  await page.getByRole('button', { name: 'Start', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Next segment' })).toBeEnabled({ timeout: 3000 });
+  await page.getByRole('button', { name: 'Next segment' }).click();
+  await expect(page.locator('#word-progress')).toContainText('Segment 2 of 2');
+  await page.getByRole('button', { name: 'Back to reading' }).click();
+  await expect(page.locator('#note-title')).toHaveText('Paragraph 1');
 });
 
 test('word speed is remembered across sessions', async ({ page }) => {

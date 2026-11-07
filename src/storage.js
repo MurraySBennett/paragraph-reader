@@ -11,6 +11,7 @@ const preferenceRules = {
   textWidth: value => Number.isInteger(value) && value >= 35 && value <= 85,
   pageWords: value => Number.isInteger(value) && value >= 50 && value <= 1000,
   wordWpm: value => Number.isInteger(value) && value >= 100 && value <= 800,
+  wordSegment: value => ['sentence', 'paragraph'].includes(value),
   notesWidth: value => Number.isInteger(value) && value >= 20 && value <= 65,
   editorHeight: value => Number.isInteger(value) && value >= 120 && value <= 600,
   customBg: value => /^#[0-9a-f]{6}$/i.test(value),

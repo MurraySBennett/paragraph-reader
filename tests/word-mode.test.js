@@ -55,3 +55,11 @@ test('stopping cancels playback and loading a new queue resets position', async 
   assert.deepEqual(words, ['Old', 'New']);
   player.stop();
 });
+
+test('word callback sees the displayed word as current progress', () => {
+  let seen;
+  const player = new WordPlayer({ onWord: (_word, index) => { seen = [index, player.index]; } });
+  player.load(['One two']); player.start();
+  assert.deepEqual(seen, [1, 1]);
+  player.stop();
+});

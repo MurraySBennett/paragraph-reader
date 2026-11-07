@@ -30,8 +30,8 @@ export class WordPlayer {
       this.setState(this.segmentIndex < this.segments.length - 1 ? 'waiting' : 'finished');
       return;
     }
-    this.onWord(this.words[this.index], this.index + 1, this.words.length, this.segmentIndex + 1, this.segments.length);
-    this.index++;
+    const word = this.words[this.index++];
+    this.onWord(word, this.index, this.words.length, this.segmentIndex + 1, this.segments.length);
     this.timer = setTimeout(() => this.tick(), 60000 / this.wpm);
   }
   pause() { if (this.state !== 'playing') return; clearTimeout(this.timer); this.timer = null; this.setState('paused'); }

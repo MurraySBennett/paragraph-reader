@@ -2,7 +2,7 @@ import { prepareText, splitParagraphs } from './content.js';
 import { parsePlain, makeStructuredChunks } from './passages.js';
 import { renderChunk, sourceAnchorForSelection } from './render-passages.js';
 import { createDocument, fingerprint, loadDocument, saveDocument, parseBackup, validPreferences, findRecoverableDocuments } from './storage.js';
-import { WordPlayer } from './word-mode.js';
+import { WordPlayer, makeWordSegments } from './word-mode.js';
 import { readPdf } from './pdf.js';
 import { importFile } from './import-file.js';
 import { parseTex } from './tex.js';
@@ -18,9 +18,9 @@ try {
   storage.setItem(probe, '1'); storage.removeItem(probe);
   persistentStorage = true;
 } catch { storage = memoryStorage; }
-let doc = null, paragraphs = [], paragraphHashes = [], chunks = [], chunkIndex = 0, noteAnchor = null, wordSourceAnchor = null, saveTimer = 0, toastTimer = 0, recoveryDocs = [];
+let doc = null, paragraphs = [], paragraphHashes = [], chunks = [], chunkIndex = 0, noteAnchor = null, wordSourceAnchor = null, wordScopeText = '', saveTimer = 0, toastTimer = 0, recoveryDocs = [];
 const PREF_KEY = 'paragraph-reader:preferences:v2';
-const defaults = { unit: 'paragraph', notes: true, theme: 'system', fontFamily: 'serif-classic', fontSize: 20, lineHeight: 1.7, textWidth: 64, pageWords: 250, wordWpm: 300, notesWidth: 34, editorHeight: 240, customBg: '#f8f5ef', customText: '#202327', customAccent: '#345f68' };
+const defaults = { unit: 'paragraph', notes: true, theme: 'system', fontFamily: 'serif-classic', fontSize: 20, lineHeight: 1.7, textWidth: 64, pageWords: 250, wordWpm: 300, wordSegment: 'sentence', notesWidth: 34, editorHeight: 240, customBg: '#f8f5ef', customText: '#202327', customAccent: '#345f68' };
 const fontStacks = { 'serif-classic': 'Iowan Old Style, Palatino Linotype, Palatino, Georgia, serif', 'serif-literary': 'Georgia, Cambria, Times New Roman, serif', 'sans-system': 'system-ui, -apple-system, Segoe UI, sans-serif', 'sans-humanist': 'Trebuchet MS, Gill Sans, Segoe UI, sans-serif', opendyslexic: 'OpenDyslexic, system-ui, sans-serif' };
 let prefs = { ...defaults };
 try { const saved = JSON.parse(storage.getItem(PREF_KEY) || '{}'); if (validPreferences(saved)) prefs = { ...defaults, ...saved }; } catch {}
@@ -52,6 +52,7 @@ function applyPrefs() {
   $('custom-colors').hidden = prefs.theme !== 'custom';
   $('word-speed').value = prefs.wordWpm;
   $('word-speed-value').textContent = `${prefs.wordWpm} WPM`;
+  $('word-segment').value = prefs.wordSegment;
   for (const [prop, value] of [['--bg', prefs.customBg], ['--surface', prefs.customBg], ['--panel', prefs.customBg], ['--fg', prefs.customText], ['--accent', prefs.customAccent]]) document.body.style.setProperty(prop, prefs.theme === 'custom' ? value : '');
   document.body.style.setProperty('--accent-text', prefs.theme === 'custom' ? '#fff' : '');
   setNotesVisible(prefs.notes, false);
@@ -273,14 +274,34 @@ async function restoreBackup(event) {
 }
 for (const id of ['import-backup', 'setup-import-backup']) $(id).addEventListener('change', restoreBackup);
 
+function showWordState(state) {
+  $('word-play').textContent = { ready: 'Start', playing: 'Pause', paused: 'Resume', waiting: 'Start', finished: 'Start' }[state];
+  $('word-play').disabled = state === 'waiting' || state === 'finished';
+  $('word-next').disabled = state !== 'waiting';
+  const segment = player.segments.length ? `Segment ${player.segmentIndex + 1} of ${player.segments.length}` : 'No words';
+  const words = player.words.length ? ` · ${player.index} / ${player.words.length} words` : '';
+  const stateLabel = { ready: 'Ready', playing: 'Playing', paused: 'Paused', waiting: 'Next ready', finished: 'Complete' }[state];
+  $('word-progress').textContent = `${segment}${words} · ${stateLabel}`;
+}
 const player = new WordPlayer({
-  onWord: (word, index, total) => { $('word-display').textContent = word; $('word-progress').textContent = `${index} / ${total}`; },
-  onFinish: finishWordMode,
+  onWord: word => { $('word-display').textContent = word; showWordState(player.state); },
+  onState: showWordState,
 });
+function currentWordScope() {
+  const chunk = chunks[chunkIndex];
+  const blocks = doc.version === 3 ? doc.blocks : parsePlain(doc.text, doc.name).blocks;
+  if (prefs.unit !== 'sentence') return blocks.slice(chunk.start).map(block => block.text).join('\n\n');
+  const prior = chunks.slice(0, chunkIndex).filter(item => item.start === chunk.start).length;
+  const remaining = makeWordSegments(blocks[chunk.start].text, 'sentence').slice(prior).join(' ');
+  return [remaining, ...blocks.slice(chunk.start + 1).map(block => block.text)].filter(Boolean).join('\n\n');
+}
+function loadWordScope() {
+  $('word-display').textContent = '';
+  player.load(makeWordSegments(wordScopeText, prefs.wordSegment));
+}
 function finishWordMode() {
-  player.stop(false);
+  player.stop();
   if ($('word-mode').open) $('word-mode').close();
-  $('word-play').textContent = 'Pause';
   noteAnchor = wordSourceAnchor;
   renderNotes();
   card.focus();
@@ -290,26 +311,32 @@ $('word-start').addEventListener('click', () => {
   const selection = getSelection();
   const selected = selection?.toString().trim();
   const inCard = selected && card.contains(selection.anchorNode);
-  const text = inCard ? selected : chunks[chunkIndex].text;
+  const text = inCard ? selected : currentWordScope();
   wordSourceAnchor = inCard ? sourceAnchorForSelection(chunks[chunkIndex], selection) : chunks[chunkIndex].start;
   if (!text) return;
   $('word-mode').showModal();
-  $('word-display').textContent = '';
-  $('word-play').textContent = 'Pause';
+  wordScopeText = text;
   $('word-exit').focus();
   player.setWpm($('word-speed').value);
-  player.start(text);
+  loadWordScope();
 });
 $('word-exit').addEventListener('click', finishWordMode);
 $('word-play').addEventListener('click', () => {
-  if (player.paused) { player.resume(); $('word-play').textContent = 'Pause'; }
-  else { player.pause(); $('word-play').textContent = 'Play'; }
+  if (player.state === 'ready') player.start();
+  else if (player.state === 'paused') player.resume();
+  else if (player.state === 'playing') player.pause();
 });
+$('word-next').addEventListener('click', () => player.next());
+$('word-segment').addEventListener('change', event => { prefs.wordSegment = event.target.value; savePrefs(); loadWordScope(); });
 $('word-speed').addEventListener('input', event => { player.setWpm(event.target.value); prefs.wordWpm = player.wpm; $('word-speed-value').textContent = `${player.wpm} WPM`; savePrefs(); });
-$('word-mode').addEventListener('keydown', event => {
+document.addEventListener('keydown', event => {
+  if (!$('word-mode').open) return;
   if (event.key === 'Escape') { event.preventDefault(); finishWordMode(); }
+  if (event.key.toLowerCase() === 'n' && !event.metaKey && !event.ctrlKey && !event.altKey && !event.target.matches('input:not([type=range]), textarea, select, [contenteditable]')) {
+    if (player.state === 'waiting') { event.preventDefault(); player.next(); }
+  }
   if (event.key === 'Tab') {
-    const controls = [$('word-exit'), $('word-play'), $('word-speed')];
+    const controls = [$('word-exit'), $('word-play'), $('word-next'), $('word-segment'), $('word-speed')].filter(control => !control.disabled);
     const current = controls.indexOf(document.activeElement);
     if (event.shiftKey && current <= 0) { event.preventDefault(); controls.at(-1).focus(); }
     else if (!event.shiftKey && current === controls.length - 1) { event.preventDefault(); controls[0].focus(); }

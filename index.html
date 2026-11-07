@@ -101,12 +101,12 @@
 
   <dialog id="earlier-notes-dialog" aria-labelledby="earlier-notes-title"><div class="dialog-head"><h2 id="earlier-notes-title">Earlier notes</h2><button id="earlier-notes-close" type="button" aria-label="Close earlier notes">×</button></div><p>These notes belong to an earlier version of this file. Download a backup before changing or clearing browser data.</p><div id="earlier-notes-list"></div></dialog>
 
-  <dialog id="shortcuts" aria-labelledby="shortcuts-title"><div class="dialog-head"><h2 id="shortcuts-title">Keyboard shortcuts</h2><button id="shortcuts-close" type="button" aria-label="Close keyboard shortcuts">×</button></div><p><kbd>←</kbd> and <kbd>→</kbd> move between chunks. <kbd>N</kbd> focuses notes. <kbd>Esc</kbd> returns to reading. Shortcuts pause while you type in a field.</p></dialog>
+  <dialog id="shortcuts" aria-labelledby="shortcuts-title"><div class="dialog-head"><h2 id="shortcuts-title">Keyboard shortcuts</h2><button id="shortcuts-close" type="button" aria-label="Close keyboard shortcuts">×</button></div><p><kbd>←</kbd> and <kbd>→</kbd> move between chunks. <kbd>N</kbd> focuses notes; in word mode, it starts the next segment when ready. <kbd>Esc</kbd> returns to reading. Shortcuts pause while you type in a field.</p></dialog>
 
   <dialog id="word-mode" class="word-mode" aria-label="Word reader">
     <div class="word-top"><button id="word-exit" type="button">← Back to reading</button><span id="word-progress"></span></div>
     <div id="word-display" class="word-display" aria-live="off"></div>
-    <div class="word-controls"><button id="word-play" type="button">Pause</button><label>Speed <input id="word-speed" aria-label="Words per minute" type="range" min="100" max="800" step="25" value="300"><output id="word-speed-value">300 WPM</output></label></div>
+    <div class="word-controls"><button id="word-play" type="button" class="primary">Start</button><button id="word-next" type="button" disabled>Next segment</button><label>Segment <select id="word-segment" aria-label="Word segment"><option value="sentence">Sentence</option><option value="paragraph">Paragraph</option></select></label><label>Speed <input id="word-speed" aria-label="Words per minute" type="range" min="100" max="800" step="25" value="300"><output id="word-speed-value">300 WPM</output></label></div>
   </dialog>
   <script id="boot-text" type="text/plain" data-source=""></script>
   <script type="module" src="./dist/app.js"></script>
