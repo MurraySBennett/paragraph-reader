@@ -7,7 +7,7 @@ test('built app precaches the shell and all examples on its subpath', async ({ p
   await page.reload();
   await context.setOffline(true);
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Paragraph Reader', exact: true })).toBeVisible();
+  await expect(page.getByLabel('Paste text')).toBeVisible();
   await page.locator('[data-sample="lion-and-mouse.docx"]').getByRole('button', { name: 'Read example' }).click();
   await expect(page.locator('#chunk-text')).toContainText('Lion and the Mouse');
   await page.getByRole('button', { name: 'Utilities' }).click();
