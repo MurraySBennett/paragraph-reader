@@ -145,6 +145,10 @@ test('word mode opens paused and waits for N between sentences', async ({ page }
   await expect(page.locator('#word-progress')).toContainText('1 / 2 words');
   await page.getByLabel('Words per minute').fill('800');
   await expect(page.getByRole('button', { name: 'Next segment' })).toBeEnabled({ timeout: 3000 });
+  await page.getByLabel('Words per minute').focus();
+  await page.keyboard.press('n');
+  await expect(page.locator('#word-progress')).toContainText('Segment 1 of 3');
+  await page.getByRole('button', { name: 'Back to reading' }).focus();
   await page.keyboard.press('n');
   await expect(page.locator('#word-progress')).toContainText('Segment 2 of 3');
   await expect(page.getByRole('button', { name: 'Next segment' })).toBeEnabled({ timeout: 3000 });

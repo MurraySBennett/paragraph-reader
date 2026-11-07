@@ -332,7 +332,7 @@ $('word-speed').addEventListener('input', event => { player.setWpm(event.target.
 document.addEventListener('keydown', event => {
   if (!$('word-mode').open) return;
   if (event.key === 'Escape') { event.preventDefault(); finishWordMode(); }
-  if (event.key.toLowerCase() === 'n' && !event.metaKey && !event.ctrlKey && !event.altKey && !event.target.matches('input:not([type=range]), textarea, select, [contenteditable]')) {
+  if (event.key.toLowerCase() === 'n' && !event.metaKey && !event.ctrlKey && !event.altKey && !event.target.matches('input, textarea, select, [contenteditable]')) {
     if (player.state === 'waiting') { event.preventDefault(); player.next(); }
   }
   if (event.key === 'Tab') {
