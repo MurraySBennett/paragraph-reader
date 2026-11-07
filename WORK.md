@@ -2,15 +2,14 @@
 
 ## Now
 
-- Word-reader pacing goal in `feat/word-reader-pacing`; plan: `docs/superpowers/plans/2026-11-07-word-reader-pacing.md`. Player, dialog, keyboard, and selection checks pass locally; package and release checks next.
-- Structured passages, DOCX import, reader fonts, six credited examples, offline install, and a downloadable ZIP are published at https://murraysbennett.github.io/paragraph-reader/.
-- Execution plan: `docs/superpowers/plans/2026-11-07-structured-import-examples-offline.md`; all seven milestones complete.
-- GitHub Pages run 42342318569 passed unit, Python CLI, hosted Chromium, Linux/macOS/Windows extracted-ZIP smoke, and deployment checks; live site, manifest, service worker, sample, and ZIP returned HTTP 200.
+- Word mode now opens paused, plays by its own sentence/paragraph setting, and waits for N/Next between segments at https://murraysbennett.github.io/paragraph-reader/.
+- Pacing plan: `docs/superpowers/plans/2026-11-07-word-reader-pacing.md`; implementation and review fix are complete.
+- GitHub Pages run 42344808281 passed Node, Python, hosted Chromium, Linux/macOS/Windows extracted-ZIP checks, and deployment; live page, bundle, service worker, and ZIP returned HTTP 200.
 - The terminal helper remains at `tools/paragraph-reader`; native installers and a notes review space remain later build tasks.
 
 ## build
 
-- [ ] now — Add paused word-reader entry and sentence/paragraph pacing with explicit N/Next between segments; preserve selection and notes anchors.
+- [x] 2026-11-07 — Add paused word-reader entry and sentence/paragraph pacing with explicit N/Next between segments; preserve selection and notes anchors.
 - [x] 2026-11-07 — Build the approved six-example library and homepage entry points after verifying source rights and formats.
 - [x] 2026-11-07 — Complete and verify installable offline browser access, a downloadable desktop copy, and repo guidance. Native installers remain later.
 - [ ] later — Design a notes review space and better Markdown export, with optional local copyable prompt composition for an external AI assistant; no automatic sending.
