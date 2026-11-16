@@ -2,14 +2,12 @@ import { test, expect } from '@playwright/test';
 import { pathToFileURL } from 'node:url';
 import { join, dirname } from 'node:path';
 import { PDFDocument, StandardFonts } from 'pdf-lib';
-import { readFile, mkdtemp, mkdir, writeFile, readdir } from 'node:fs/promises';
+import { readFile, mkdtemp, mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { unzipSync } from 'fflate';
 import assert from 'node:assert/strict';
 
-const zipName = (await readdir('dist')).find(entry => /^reader-\d{4}-\d{2}-\d{2}\.zip$/.test(entry));
-assert.ok(zipName, 'build must emit a dated reader ZIP');
-const packageFiles = unzipSync(new Uint8Array(await readFile(join('dist', zipName))));
+const packageFiles = unzipSync(new Uint8Array(await readFile('dist/reader-offline.zip')));
 for (const name of ['paragraph-reader.html', 'START-HERE.txt', 'samples/README.md', 'samples/dutch-auctions.pdf', 'samples/lion-and-mouse.docx', 'samples/rainbow-passage.txt', 'samples/human-machine-teams.tex', 'samples/la-llave-de-lucia.md', 'samples/grin-readme.md', 'licenses/LICENSE', 'licenses/FFLATE-LICENSE', 'licenses/OPENDYSLEXIC-OFL.txt']) assert.ok(packageFiles[name], `Missing ${name} from offline package`);
 const packageDir = await mkdtemp(join(tmpdir(), 'paragraph-reader-package-'));
 for (const [name, bytes] of Object.entries(packageFiles)) {

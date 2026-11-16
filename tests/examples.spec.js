@@ -48,7 +48,7 @@ test('hosted download points to the built offline package', async ({ page }) => 
   const pending = page.waitForEvent('download');
   await page.getByRole('link', { name: /Download offline copy/ }).click();
   const download = await pending;
-  expect(download.suggestedFilename()).toMatch(/^reader-\d{4}-\d{2}-\d{2}\.zip$/);
+  expect(download.suggestedFilename()).toBe('reader-offline.zip');
   await download.path();
 });
 

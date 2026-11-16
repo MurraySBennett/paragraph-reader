@@ -1,5 +1,5 @@
 import { build } from 'esbuild';
-import { readFile, writeFile, mkdir, cp, readdir, rm } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, cp } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { zipSync, strToU8 } from 'fflate';
@@ -12,15 +12,13 @@ await cp(join(root, 'vendor'), join(dist, 'vendor'), { recursive: true });
 await cp(join(root, 'samples'), join(dist, 'samples'), { recursive: true });
 await cp(join(root, 'favicon.svg'), join(dist, 'favicon.svg'));
 for (const file of ['manifest.webmanifest', 'icon-192.png', 'icon-512.png']) await cp(join(root, file), join(dist, file));
-// The offline package is dated at build time. index.html carries placeholders so
-// the date and filename live in exactly one place; a literal here goes stale silently.
+// The package's filename is stable and its date lives inside it, in START-HERE.
+// A name that moved with the build date would go stale in every already-cached
+// page -- the service worker is cache-first and the ZIP is not precached, so a
+// returning visitor's download link would 404 after the next deploy.
 const RELEASE_DATE = new Date().toISOString().slice(0, 10);
-const ZIP_NAME = `reader-${RELEASE_DATE}.zip`;
-const html = (await readFile(join(root, 'index.html'), 'utf8'))
-  .replaceAll('__ZIP_NAME__', ZIP_NAME)
-  .replaceAll('__RELEASE_DATE__', RELEASE_DATE);
-// Drop any earlier dated package, or dist/ accumulates one per build day.
-for (const entry of await readdir(dist)) if (entry.endsWith('.zip')) await rm(join(dist, entry));
+const ZIP_NAME = 'reader-offline.zip';
+const html = await readFile(join(root, 'index.html'), 'utf8');
 await writeFile(join(dist, 'index.html'), html.replace('src="./dist/app.js"', 'src="./app.js"').replace('href="./dist/manifest.webmanifest"', 'href="./manifest.webmanifest"').replace(`href="./dist/${ZIP_NAME}"`, `href="./${ZIP_NAME}"`));
 
 await build({ entryPoints: [join(root, 'src/import-file.js')], outfile: join(dist, 'import-file.js'), bundle: true, format: 'esm', platform: 'browser', target: 'es2022', minify: true });
