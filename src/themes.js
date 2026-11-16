@@ -1,16 +1,17 @@
+// mode mirrors each palette's declared color-scheme; system and custom have neither.
 export const THEMES = [
-  { id: 'after-hours', label: 'After Hours' },
-  { id: 'neon', label: 'Neon' },
-  { id: 'velvet', label: 'Velvet' },
-  { id: 'newcastle', label: 'Newcastle' },
-  { id: 'utsa', label: 'UT San Antonio' },
-  { id: 'ohio-state', label: 'Ohio State' },
+  { id: 'after-hours', label: 'After Hours', mode: 'dark' },
+  { id: 'neon', label: 'Neon', mode: 'dark' },
+  { id: 'velvet', label: 'Velvet', mode: 'dark' },
+  { id: 'newcastle', label: 'Newcastle', mode: 'light' },
+  { id: 'utsa', label: 'UT San Antonio', mode: 'dark' },
+  { id: 'ohio-state', label: 'Ohio State', mode: 'light' },
   { id: 'system', label: 'System' },
-  { id: 'paper', label: 'Paper' },
-  { id: 'warm', label: 'Warm paper' },
-  { id: 'slate', label: 'Slate' },
-  { id: 'night', label: 'Night' },
-  { id: 'contrast', label: 'High contrast' },
+  { id: 'paper', label: 'Paper', mode: 'light' },
+  { id: 'warm', label: 'Warm paper', mode: 'light' },
+  { id: 'slate', label: 'Slate', mode: 'dark' },
+  { id: 'night', label: 'Night', mode: 'dark' },
+  { id: 'contrast', label: 'High contrast', mode: 'dark' },
   { id: 'custom', label: 'Custom' },
 ];
 
