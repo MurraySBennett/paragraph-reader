@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { THEMES } from '../src/themes.js';
+import { THEMES, themeGroups } from '../src/themes.js';
 
 // The one palette permitted to miss the bar: #f15a22 is the institution's orange.
 const KNOWN_EXCEPTIONS = { utsa: ['accent'] };
@@ -53,6 +53,24 @@ test('every themed id has a rule whose colour scheme matches its mode', () => {
     assert.ok(rules.has(id), `no body[data-theme=${id}] rule`);
     assert.equal(rules.get(id).scheme, mode, `${id} declares color-scheme:${rules.get(id).scheme}`);
   }
+});
+
+test('the menu groups by mode, with system and custom loose at the ends', () => {
+  const groups = themeGroups();
+  assert.deepEqual(groups.map(group => group.label), [null, 'Light', 'Dark', 'University', null]);
+  assert.deepEqual(groups.at(0).items.map(item => item.id), ['system']);
+  assert.deepEqual(groups.at(-1).items.map(item => item.id), ['custom']);
+  assert.deepEqual(groups[1].items.map(item => item.id),
+    ['paper', 'warm', 'mist', 'sage', 'lavender', 'gruvbox-light']);
+  assert.deepEqual(groups[2].items.map(item => item.id),
+    ['after-hours', 'night', 'slate', 'velvet', 'neon', 'dracula', 'night-owl', 'gruvbox-dark', 'contrast']);
+  assert.deepEqual(groups[3].items.map(item => item.id), ['newcastle', 'utsa', 'ohio-state']);
+});
+
+test('every theme appears in the menu exactly once', () => {
+  const ids = themeGroups().flatMap(group => group.items.map(item => item.id));
+  assert.equal(ids.length, THEMES.length);
+  assert.deepEqual([...new Set(ids)].sort(), THEMES.map(theme => theme.id).sort());
 });
 
 test('every theme meets the contrast bar, with only the recorded exceptions failing', () => {
