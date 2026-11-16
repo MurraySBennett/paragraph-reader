@@ -7,6 +7,26 @@
 - Next build decision: choose a broader product name before changing the public title and app identity. Teaching links will not set themes in this phase.
 - Native installers and a notes review space remain later build tasks; the terminal helper is at `tools/paragraph-reader`.
 
+### Reverted: PDF paragraph recovery, 2026-11-16
+
+The concurrent session's PDF layout work (`src/pdf-layout.js`, `src/pdf.js`,
+`bin/paragraph-reader`, `tests/pdf-layout.test.js`, `tests/test_cli.py`) was committed in
+`0381484` on Murray's clearance and **reverted** in the commit below, because it broke three
+Playwright specs: `examples.spec.js:21`, `local-copy.spec.js:23` and `offline.spec.js:3` all
+assert that importing `samples/dutch-auctions.pdf` renders its title and instead received the
+running header — `runningHeads()` in `src/pdf-layout.js` does not recognise
+`Bennett et al. Cogn. Research (2020) 5:62`. `pages.yml` skips `deploy` when `build` fails,
+so the failure blocked every release, not just that feature.
+
+Nothing is lost: `0381484` is in history and the work can be re-landed with a fix.
+
+**The lesson worth keeping.** That session verified `npm test` 36/36 and
+`python3 -m unittest` 5/5 and was right about both — but neither runs the Playwright specs,
+and Playwright cannot launch on this machine at all (chromium and firefox both fail
+`browserType.launch`; `vendor/pdf.mjs` also cannot run under node 22 or 24). **A green local
+run here does not mean green.** CI is the only gate for anything touching PDF import,
+rendering, or the offline package; push to a branch and read the run before believing it.
+
 ## build
 
 - [x] 2026-11-08 — Implement the selected home/reader visual style and optional site-wide palettes, including responsive and contrast corrections.
