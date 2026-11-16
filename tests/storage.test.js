@@ -61,7 +61,8 @@ test('font preference accepts listed families and rejects arbitrary CSS', () => 
 test('theme registry accepts every preset and rejects unknown values', () => {
   const ids = THEMES.map(theme => theme.id);
   assert.equal(new Set(ids).size, ids.length);
-  for (const id of ['after-hours', 'neon', 'velvet', 'newcastle', 'utsa', 'ohio-state']) {
+  for (const id of ['after-hours', 'neon', 'velvet', 'newcastle', 'utsa', 'ohio-state',
+    'mist', 'sage', 'lavender', 'gruvbox-light', 'dracula', 'night-owl', 'gruvbox-dark']) {
     assert.equal(ids.includes(id), true);
     assert.equal(isThemeId(id), true);
     assert.equal(validPreferences({ theme: id }), true);
