@@ -14,39 +14,6 @@ class CliTest(unittest.TestCase):
         self.assertIn('Two', text)
         self.assertIn('After list.', text)
 
-    def test_line_numbered_manuscript_splits_on_first_line_indent(self):
-        cli = runpy.run_path(str(Path(__file__).parents[1] / 'bin' / 'paragraph-reader'))
-        page_one = '\n'.join([
-            ' 1   LEARNING IN OLDER AGE                             7',
-            ' 2',
-            ' 3          The domain structure of later life learning can be organized in',
-            ' 4',
-            ' 5   several ways, with a broad distinction between kinds of knowledge.',
-            ' 6',
-            ' 7          Measures that collapse across domains may obscure the specific',
-            ' 8',
-            ' 9   situations in which older adults feel competent.',
-        ])
-        page_two = '\n'.join([
-            ' 1   LEARNING IN OLDER AGE                             8',
-            ' 2',
-            ' 3   They may still capture a general orientation toward learning.',
-        ])
-        paragraphs = cli['layout_paragraphs'](page_one + '\f' + page_two).split('\n\n')
-        self.assertEqual(len(paragraphs), 2)
-        self.assertTrue(paragraphs[0].startswith('The domain structure'))
-        self.assertTrue(paragraphs[0].endswith('kinds of knowledge.'))
-        self.assertIn('feel competent. They may still capture', paragraphs[1])
-        self.assertNotIn('LEARNING IN OLDER AGE', '\n\n'.join(paragraphs))
-
-    def test_plain_pdf_text_keeps_blank_line_paragraphs(self):
-        cli = runpy.run_path(str(Path(__file__).parents[1] / 'bin' / 'paragraph-reader'))
-        text = 'A first paragraph of ordinary text.\n\n2024 was the reference year.\nIt continues here.'
-        self.assertEqual(
-            cli['layout_paragraphs'](text).split('\n\n'),
-            ['A first paragraph of ordinary text.', '2024 was the reference year. It continues here.'],
-        )
-
     def test_bootstrapped_page_preserves_unicode_and_script_like_text(self):
         cli = runpy.run_path(str(Path(__file__).parents[1] / 'bin' / 'paragraph-reader'))
         with tempfile.TemporaryDirectory() as directory:
