@@ -109,6 +109,93 @@ def strip_tex(src: str) -> str:
     return s.strip()
 
 
+BARE_NUMBER = re.compile(r"^\s*\d{1,3}\s*$")
+GUTTER = re.compile(r"^\s*\d{1,3}(?=\s{2})")
+INDENT_STEP = 4
+HEADING_CHARS = 70
+
+
+def looks_line_numbered(rows: list[str]) -> bool:
+    """Journal manuscripts number every row, so no row is ever blank.
+
+    Requiring the counter to climb keeps a table column of bare figures from
+    being mistaken for a line-number gutter.
+    """
+    bare = [int(row.strip()) for row in rows if BARE_NUMBER.match(row)]
+    if len(rows) < 8 or len(bare) / len(rows) < 0.2:
+        return False
+    rising = sum(1 for a, b in zip(bare, bare[1:]) if b > a)
+    return rising >= (len(bare) - 1) * 0.6
+
+
+def head_key(text: str) -> str:
+    return re.sub(r"\s+\d{1,4}$", "", text.strip()).upper()
+
+
+def running_heads(pages: list[list[str]]) -> set[str]:
+    counts: dict[str, int] = {}
+    for rows in pages:
+        first = next((row for row in rows if row.strip()), None)
+        if first is None:
+            continue
+        key = head_key(first)
+        if key:
+            counts[key] = counts.get(key, 0) + 1
+    threshold = max(2, -(-len(pages) // 2))
+    return {key for key, count in counts.items() if count >= threshold}
+
+
+def is_heading(text: str) -> bool:
+    """Short, opens in capitals, and carries no sentence punctuation of its own."""
+    return len(text) <= HEADING_CHARS and bool(re.match(r"[A-Z0-9]", text)) and not re.search(r"[.,;:!?-]$", text)
+
+
+def layout_paragraphs(text: str) -> str:
+    """Recover paragraphs from the first-line indent rather than from blank lines."""
+    pages = [page.split("\n") for page in text.replace("\r\n", "\n").split("\f")]
+    numbered = looks_line_numbered([row for page in pages for row in page])
+    stripped = [
+        [GUTTER.sub("", row) if numbered else row for row in page if not (numbered and BARE_NUMBER.match(row))]
+        for page in pages
+    ]
+    heads = running_heads(stripped)
+
+    paragraphs: list[str] = []
+    current: list[str] = []
+
+    def flush() -> None:
+        if not current:
+            return
+        joined = current[0]
+        for row in current[1:]:
+            joined = joined + row if joined.endswith("-") else f"{joined} {row}"
+        paragraphs.append(re.sub(r"\s{2,}", " ", joined).strip())
+        current.clear()
+
+    for page in stripped:
+        # A running head is removed outright: a blank row ends a paragraph, a dropped head does not.
+        rows = [row for row in page if not (row.strip() and head_key(row) in heads)]
+        kept = [(len(row) - len(row.lstrip()), row.strip()) if row.strip() else None for row in rows]
+        bodies = [row for row in kept if row]
+        if not bodies:
+            flush()
+            continue
+        indents = [indent for indent, _ in bodies]
+        modal = max(sorted(set(indents)), key=lambda value: (indents.count(value), -value))
+        for row in kept:
+            if row is None:
+                flush()
+                continue
+            indent, body = row
+            if indent >= modal + INDENT_STEP:
+                flush()
+            elif current and is_heading(body) and re.search(r"[.!?:]$", current[-1]):
+                flush()
+            current.append(body)
+    flush()
+    return "\n\n".join(paragraph for paragraph in paragraphs if paragraph)
+
+
 def read_pdf(path: Path) -> str:
     pdftotext = shutil.which("pdftotext")
     if not pdftotext:
@@ -136,7 +223,7 @@ def read_pdf(path: Path) -> str:
         text = result.stdout or ""
     if not text.strip():
         die(f"{path.name} is empty, or has no extractable text.")
-    return text
+    return layout_paragraphs(text) or text
 
 
 def load_text(path: Path) -> str:

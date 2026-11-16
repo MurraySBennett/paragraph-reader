@@ -7,10 +7,27 @@
 - Next build decision: choose a broader product name before changing the public title and app identity. Teaching links will not set themes in this phase.
 - Native installers and a notes review space remain later build tasks; the terminal helper is at `tools/paragraph-reader`.
 
+### Note for the concurrent session, 2026-11-16
+
+A second session made one limited, self-contained change and is not working anywhere else in
+this repo: PDF paragraph recovery for line-numbered manuscripts (see the 2026-11-16 build
+entry). Touched only `src/pdf-layout.js` (new), `src/pdf.js`, `bin/paragraph-reader`,
+`tests/pdf-layout.test.js` (new), `tests/test_cli.py`, and this file. Nothing else was read
+for edit, and no commit, branch, or push was made; please include these files in your next
+push. `npm test` passes 36/36 and `python3 -m unittest discover -s tests -p 'test_*.py'`
+passes 5/5 as of that change.
+
+One thing is deliberately left undone: `dist/paragraph-reader.html` is tracked and now stale
+with respect to `src/pdf.js`, so `npm run build` is needed before the next release. That was
+left to you because rebuilding rewrites a 12.6 MB tracked file and would collide with
+in-flight work. The CLI path does not depend on it — the Python helper prepares its own
+paragraphs — so only in-browser PDF import reads the old behaviour until the rebuild.
+
 ## build
 
 - [x] 2026-11-08 — Implement the selected home/reader visual style and optional site-wide palettes, including responsive and contrast corrections.
 - [ ] next — Choose a broader product name before changing the public title and app identity.
+- [x] 2026-11-16 — Recover paragraphs in line-numbered, double-spaced PDFs (journal submission format), which previously imported as a single paragraph. `pdftotext -layout` puts the manuscript line number on every row including the double-spacing gaps, so no row is ever blank and `splitParagraphs`' `\n\s*\n` boundary never fires; a 53-page manuscript gave 3,268 rows, 2,229 of them a bare line number, and 8 blank-line breaks in the whole document. New `src/pdf-layout.js` drops bare-gutter rows, strips the gutter, removes repeated running heads, and breaks paragraphs on per-page modal indent + 4, rejoining a word hyphenated across a row break. `src/pdf.js` now reconstructs rows from PDF.js item positions and uses it; `read_pdf` in `bin/paragraph-reader` mirrors it in Python. Gutter handling is gated on a climbing counter so a table column of bare figures is left alone.
 - [x] 2026-11-07 — Widen the default reader text column while retaining edge padding and a narrower user choice.
 - [x] 2026-11-07 — Add paused word-reader entry and sentence/paragraph pacing with explicit N/Next between segments; preserve selection and notes anchors.
 - [x] 2026-11-07 — Build the approved six-example library and homepage entry points after verifying source rights and formats.

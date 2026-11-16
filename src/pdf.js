@@ -1,3 +1,5 @@
+import { layoutParagraphs, rowsFromItems } from './pdf-layout.js';
+
 export async function readPdf(file) {
   let pdfjs = globalThis.__PARAGRAPH_PDFJS__;
   try { pdfjs ||= await import(new URL('./vendor/pdf.mjs', document.baseURI).href); }
@@ -10,9 +12,11 @@ export async function readPdf(file) {
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
-    const text = content.items.map(item => item.str || '').join(' ').replace(/\s+/g, ' ').trim();
-    if (text) pages.push(text);
+    const rows = rowsFromItems(content.items);
+    if (rows.length) pages.push(rows);
   }
   if (!pages.length) throw new Error('No extractable text found. Scanned PDFs need OCR first.');
-  return pages.join('\n\n');
+  const paragraphs = layoutParagraphs(pages);
+  if (!paragraphs.length) throw new Error('No extractable text found. Scanned PDFs need OCR first.');
+  return paragraphs.join('\n\n');
 }
