@@ -90,7 +90,7 @@ test('mobile reader keeps its name and controls visible without horizontal overf
   await page.goto('/');
   await page.getByLabel('Paste text').fill('A short reading.');
   await page.getByRole('button', { name: 'Start reading' }).click();
-  await expect(page.locator('.toolbar .brand')).toContainText('Paragraph Reader');
+  await expect(page.locator('.toolbar .brand')).toContainText('Reader');
   await expect(page.locator('.toolbar .brand span').last()).toBeVisible();
   await expect(page.getByRole('button', { name: 'Appearance' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Utilities' })).toBeInViewport();

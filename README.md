@@ -1,8 +1,8 @@
-# Paragraph Reader
+# Reader
 
 A quiet, one-chunk-at-a-time reader for text you bring yourself. Read by paragraph, sentence, or a page-length group of paragraphs; add notes when useful; play a selected passage one word at a time. It runs entirely in the browser. There is no account, upload, analytics, or server-side document storage.
 
-**Use online:** https://murraysbennett.github.io/paragraph-reader/
+**Use online:** https://reader.murraysbennett.com
 
 The homepage has six ready-to-read examples across TXT, TeX, DOCX, Markdown, and PDF. Their sources and rights are recorded in [samples/README.md](samples/README.md). Choose **Install on this device** for the offline browser app, or **Download offline copy** for a ZIP that opens in a desktop browser without installing developer tools. The installed app and downloaded copy may store notes separately; use **Download backup** and **Restore backup** when switching.
 

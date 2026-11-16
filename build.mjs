@@ -1,5 +1,5 @@
 import { build } from 'esbuild';
-import { readFile, writeFile, mkdir, cp } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, cp, readdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { zipSync, strToU8 } from 'fflate';
@@ -12,8 +12,16 @@ await cp(join(root, 'vendor'), join(dist, 'vendor'), { recursive: true });
 await cp(join(root, 'samples'), join(dist, 'samples'), { recursive: true });
 await cp(join(root, 'favicon.svg'), join(dist, 'favicon.svg'));
 for (const file of ['manifest.webmanifest', 'icon-192.png', 'icon-512.png']) await cp(join(root, file), join(dist, file));
-const html = await readFile(join(root, 'index.html'), 'utf8');
-await writeFile(join(dist, 'index.html'), html.replace('src="./dist/app.js"', 'src="./app.js"').replace('href="./dist/manifest.webmanifest"', 'href="./manifest.webmanifest"').replace('href="./dist/paragraph-reader-2026-11-07.zip"', 'href="./paragraph-reader-2026-11-07.zip"'));
+// The offline package is dated at build time. index.html carries placeholders so
+// the date and filename live in exactly one place; a literal here goes stale silently.
+const RELEASE_DATE = new Date().toISOString().slice(0, 10);
+const ZIP_NAME = `reader-${RELEASE_DATE}.zip`;
+const html = (await readFile(join(root, 'index.html'), 'utf8'))
+  .replaceAll('__ZIP_NAME__', ZIP_NAME)
+  .replaceAll('__RELEASE_DATE__', RELEASE_DATE);
+// Drop any earlier dated package, or dist/ accumulates one per build day.
+for (const entry of await readdir(dist)) if (entry.endsWith('.zip')) await rm(join(dist, entry));
+await writeFile(join(dist, 'index.html'), html.replace('src="./dist/app.js"', 'src="./app.js"').replace('href="./dist/manifest.webmanifest"', 'href="./manifest.webmanifest"').replace(`href="./dist/${ZIP_NAME}"`, `href="./${ZIP_NAME}"`));
 
 await build({ entryPoints: [join(root, 'src/import-file.js')], outfile: join(dist, 'import-file.js'), bundle: true, format: 'esm', platform: 'browser', target: 'es2022', minify: true });
 
@@ -34,11 +42,11 @@ const single = html
   .replace('<link rel="manifest" href="./dist/manifest.webmanifest">', '')
   .replace('<script type="module" src="./dist/app.js"></script>', () => `<script>${pdfBundle.outputFiles[0].text.replace(/<\/script/gi, '<\\/script')}</script><script>${inlineData}</script><script>${js}</script>`);
 await writeFile(join(dist, 'paragraph-reader.html'), single);
-const startHere = `Paragraph Reader · 2026-11-07\n\nOpen paragraph-reader.html in a desktop browser. You can import TXT, Markdown, TeX, DOCX, and text-based PDF files, or try the six included examples. No installation, server, or terminal is needed.\n\nNotes may be stored separately in different browsers or when this folder moves. Download a backup from Utilities and restore it when switching copies. Scanned PDFs need OCR before import.\n\nSource: https://github.com/MurraySBennett/paragraph-reader\nSample credits: samples/README.md\n`;
+const startHere = `Reader · ${RELEASE_DATE}\n\nOpen paragraph-reader.html in a desktop browser. You can import TXT, Markdown, TeX, DOCX, and text-based PDF files, or try the six included examples. No installation, server, or terminal is needed.\n\nNotes may be stored separately in different browsers or when this folder moves. Download a backup from Utilities and restore it when switching copies. Scanned PDFs need OCR before import.\n\nSource: https://github.com/MurraySBennett/paragraph-reader\nSample credits: samples/README.md\n`;
 const archive = { 'paragraph-reader.html': strToU8(single), 'START-HERE.txt': strToU8(startHere) };
 for (const name of [...sampleNames, 'README.md']) archive[`samples/${name}`] = new Uint8Array(await readFile(join(root, 'samples', name)));
 for (const name of ['LICENSE', 'MARKDOWN-IT-LICENSE', 'MAMMOTH-LICENSE', 'PARSE5-LICENSE', 'FFLATE-LICENSE', 'OPENDYSLEXIC-OFL.txt']) archive[`licenses/${name}`] = new Uint8Array(await readFile(join(root, 'vendor', name)));
-await writeFile(join(dist, 'paragraph-reader-2026-11-07.zip'), zipSync(archive, { level: 6 }));
+await writeFile(join(dist, ZIP_NAME), zipSync(archive, { level: 6 }));
 const assets = ['./', './index.html', './app.js', './src/styles.css', './vendor/OpenDyslexic-Regular.woff2', './vendor/pdf.mjs', './vendor/pdf.worker.mjs', './favicon.svg', './manifest.webmanifest', './icon-192.png', './icon-512.png', ...['rainbow-passage.txt', 'human-machine-teams.tex', 'lion-and-mouse.docx', 'la-llave-de-lucia.md', 'dutch-auctions.pdf', 'grin-readme.md', 'README.md'].map(file => `./samples/${file}`)];
 const hash = createHash('sha256');
 for (const asset of assets.slice(1)) hash.update(await readFile(join(dist, asset.slice(2))));
