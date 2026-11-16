@@ -27,6 +27,18 @@ body[data-theme=newcastle]{--bg:#fff;--surface:#f3f6f8;--panel:#e9f0f4;--fg:#171
 body[data-theme=utsa]{--bg:#032044;--surface:#0d2e53;--panel:#092849;--fg:#fff;--muted:#c8dcff;--line:#55708d;--accent:#f15a22;--accent-text:#032044;--accent-soft:#234062;--link:#ff8b5f;--focus:#ffad87;color-scheme:dark}
 body[data-theme=ohio-state]{--bg:#fff;--surface:#f6f7f8;--panel:#eff1f2;--fg:#212325;--muted:#646a6e;--line:#cfd4d8;--accent:#ba0c2f;--accent-text:#fff;--accent-soft:#f4dce1;--focus:#ba0c2f;color-scheme:light}
 
+/* Light palettes. Mist, Sage and Lavender take hues the rest of the set leaves empty. */
+body[data-theme=mist]{--bg:#eceef0;--surface:#fbfcfd;--panel:#f3f5f6;--fg:#1e2224;--muted:#585f63;--line:#ccd3d7;--accent:#2d6a7a;--accent-text:#fff;--accent-soft:#dcebef;color-scheme:light}
+body[data-theme=sage]{--bg:#edf0e9;--surface:#fbfdf8;--panel:#f3f6ef;--fg:#1f251d;--muted:#515b4e;--line:#cdd6c6;--accent:#36644a;--accent-text:#fff;--accent-soft:#dcebdf;color-scheme:light}
+body[data-theme=lavender]{--bg:#f0eef6;--surface:#fcfbff;--panel:#f6f4fb;--fg:#231f2b;--muted:#575167;--line:#d3cde2;--accent:#4f3f96;--accent-text:#fff;--accent-soft:#e3ddf5;color-scheme:light}
+body[data-theme=gruvbox-light]{--bg:#fbf1c7;--surface:#fffbef;--panel:#f4ead0;--fg:#3c3836;--muted:#665c54;--line:#d5c4a1;--accent:#076678;--accent-text:#fff;--accent-soft:#e8dcb8;color-scheme:light}
+
+/* Dark palettes. Dracula and Night Owl raise their comment colour: the canonical
+   #6272a4 and #637777 sit near 3:1 on their own backgrounds, far under the rest. */
+body[data-theme=dracula]{--bg:#282a36;--surface:#343746;--panel:#2d2f3d;--fg:#f8f8f2;--muted:#a7afce;--line:#565a70;--accent:#bd93f9;--accent-text:#1d1e26;--accent-soft:#413a57;color-scheme:dark}
+body[data-theme=night-owl]{--bg:#011627;--surface:#0b2942;--panel:#061f35;--fg:#d6deeb;--muted:#8ba0b0;--line:#44596b;--accent:#7fdbca;--accent-text:#01131f;--accent-soft:#113a4e;color-scheme:dark}
+body[data-theme=gruvbox-dark]{--bg:#282828;--surface:#353535;--panel:#2e2e2e;--fg:#ebdbb2;--muted:#bdae93;--line:#5a524a;--accent:#83a598;--accent-text:#1d2021;--accent-soft:#45403a;color-scheme:dark}
+
 button,.button,select{border-radius:3px}
 button:focus-visible,.button:focus-within,select:focus-visible,input:focus-visible,textarea:focus-visible,[tabindex]:focus-visible,.file-button:focus-within{outline-color:var(--focus,var(--accent))}
 button.primary:hover,.keep-actions #download-copy:hover{filter:none;background:var(--accent-soft);color:var(--fg)}
