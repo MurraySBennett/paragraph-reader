@@ -2,9 +2,10 @@
 
 ## Now
 
-- The approved visual refresh and optional site-wide palettes are published at https://murraysbennett.github.io/paragraph-reader/ under `docs/superpowers/plans/2026-11-08-visual-identity-and-themes.md`.
-- GitHub Pages run 42413284389 passed Node, Python, hosted Chromium, Linux/macOS/Windows extracted-ZIP checks, and deployment; the new themes also passed mobile home/reader accessibility checks.
-- Next build decision: choose a broader product name before changing the public title and app identity. Teaching links will not set themes in this phase.
+- The product is **Reader**, live at https://reader.murraysbennett.com over HTTPS. GitHub Pages serves it at a custom domain; `murraysbennett.github.io/paragraph-reader/` 301s there. Per `docs/superpowers/plans/2026-11-16-reader-site-publication.md`.
+- The name is good enough rather than settled, and changing it again costs little: the repository, npm package, `bin/paragraph-reader` and the `paragraph-reader:v2` storage key were all deliberately left alone.
+- Notes saved at the old github.io origin stay there — `localStorage` is per-origin. An installed copy still serves from cache, so **Download backup** works at the old address; a cold visit redirects.
+- Outstanding for Murray: verify the domain in GitHub's account settings against subdomain takeover, and export any notes he wants from the old origin.
 - Native installers and a notes review space remain later build tasks; the terminal helper is at `tools/paragraph-reader`.
 
 ### Reverted: PDF paragraph recovery, 2026-11-16
@@ -30,7 +31,7 @@ rendering, or the offline package; push to a branch and read the run before beli
 ## build
 
 - [x] 2026-11-08 — Implement the selected home/reader visual style and optional site-wide palettes, including responsive and contrast corrections.
-- [ ] next — Choose a broader product name before changing the public title and app identity.
+- [x] 2026-11-16 — Name the product **Reader** and publish it at https://reader.murraysbennett.com. Public identity only: title, `.toolbar .brand`, the setup header, the sample caption, `manifest.webmanifest` `name`, `tools/build-fable.mjs`'s DOCX creator and `samples/README.md`. The offline ZIP's date was hardcoded in three places and asserted as a literal in two specs, so it could never re-date; `index.html` now carries `__ZIP_NAME__`/`__RELEASE_DATE__` placeholders, `build.mjs` derives both and clears stale `dist/*.zip`. Verified live: title, manifest name and `reader-2026-11-16.zip` all serve from the new origin.
 - [x] 2026-11-07 — Widen the default reader text column while retaining edge padding and a narrower user choice.
 - [x] 2026-11-07 — Add paused word-reader entry and sentence/paragraph pacing with explicit N/Next between segments; preserve selection and notes anchors.
 - [x] 2026-11-07 — Build the approved six-example library and homepage entry points after verifying source rights and formats.
