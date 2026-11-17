@@ -6,7 +6,7 @@ async function openReading(page, text = 'First paragraph.\n\nSecond paragraph.')
   await page.goto('/');
   await page.getByLabel('Paste text').fill(text);
   await page.getByRole('button', { name: 'Start reading' }).click();
-  await expect(page.locator('#chunk-text')).toContainText('First paragraph.');
+  await expect(page.locator('#chunk-text')).toContainText(text.split('\n\n')[0].slice(0, 30));
 }
 
 test('reaching the last chunk by keyboard does not drop focus to the body', async ({ page }) => {

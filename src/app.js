@@ -40,13 +40,15 @@ function status(message, error = false) {
 }
 
 // Disabling the button a keyboard user just pressed drops focus to <body>, so the next Tab
-// restarts at the top of the page. Move focus somewhere stable before taking it away.
-function setDisabled(button, disabled, ...fallbacks) {
-  if (disabled && document.activeElement === button) {
-    const target = fallbacks.map(id => $(id)).find(el => el && !el.disabled && !el.hidden);
-    if (target) target.focus();
-  }
-  button.disabled = disabled;
+// restarts at the top of the page. Every state in the group is applied before focus is
+// rescued: a neighbour being re-enabled in the same pass is a valid target, and checking
+// one button at a time would skip past it while it is still disabled.
+function setDisabledGroup(states, fallbacks) {
+  const focused = document.activeElement;
+  for (const [id, disabled] of states) $(id).disabled = disabled;
+  if (!(focused instanceof HTMLElement) || !focused.disabled) return;
+  const target = fallbacks.map(id => $(id)).find(el => el && !el.disabled && !el.hidden);
+  if (target) target.focus();
 }
 
 function savePrefs() { try { storage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch { status('Settings could not be saved in this browser.', true); } }
@@ -131,8 +133,9 @@ function render() {
   $('progress').textContent = `${chunkIndex + 1} of ${chunks.length} ${prefs.unit}${chunks.length === 1 ? '' : 's'}`;
   $('chunk-label').textContent = `${prefs.unit} ${chunkIndex + 1}`;
   renderChunk($('chunk-text'), chunk);
-  setDisabled($('previous'), chunkIndex === 0, 'next', 'word-start');
-  setDisabled($('next'), chunkIndex === chunks.length - 1, 'previous', 'word-start');
+  setDisabledGroup(
+    [['previous', chunkIndex === 0], ['next', chunkIndex === chunks.length - 1]],
+    ['next', 'previous', 'word-start']);
   renderNotes(); saveDocSoon();
 }
 
@@ -311,8 +314,9 @@ for (const id of ['import-backup', 'setup-import-backup']) $(id).addEventListene
 
 function showWordState(state) {
   $('word-play').textContent = { ready: 'Start', playing: 'Pause', paused: 'Resume', waiting: 'Start', finished: 'Start' }[state];
-  setDisabled($('word-play'), state === 'waiting' || state === 'finished', 'word-next', 'word-exit');
-  setDisabled($('word-next'), state !== 'waiting', 'word-play', 'word-exit');
+  setDisabledGroup(
+    [['word-play', state === 'waiting' || state === 'finished'], ['word-next', state !== 'waiting']],
+    ['word-play', 'word-next', 'word-exit']);
   const segment = player.segments.length ? `Segment ${player.segmentIndex + 1} of ${player.segments.length}` : 'No words';
   const words = player.words.length ? ` · ${player.index} / ${player.words.length} words` : '';
   const stateLabel = { ready: 'Ready', playing: 'Playing', paused: 'Paused', waiting: 'Next ready', finished: 'Complete' }[state];
