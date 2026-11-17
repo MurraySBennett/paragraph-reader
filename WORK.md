@@ -3,8 +3,11 @@
 ## Now
 
 - The product is **Reader**, live at https://reader.murraysbennett.com over HTTPS. GitHub Pages serves it at a custom domain; `murraysbennett.github.io/paragraph-reader/` 301s there. The repository, npm package, `bin/paragraph-reader` and the `paragraph-reader:v2` storage key keep the old name deliberately.
-- **PR #1** (`feature/theme-grouping`) groups the theme menu into Light/Dark/University and adds seven themes. Awaiting CI; merge once green. Design and plan are dated 2026-11-17 in `docs/superpowers/`.
-- Next in the round-2 brief, none of it designed: a notes export dialog with local prompt composition, text-to-speech, and accessibility options. The TTS decision that gates the rest is bundled neural voices (20–80 MB on a 12 MB offline ZIP) versus `speechSynthesis` (zero bytes, OS voices, often absent on Linux).
+- Two rounds shipped on 2026-11-17: the grouped theme menu with seven new themes (#1), and accessibility tranche 1 (#2). Both merged and deployed.
+- **Next: accessibility tranche 2**, which needs Murray's eye first. Every theme but `contrast` fails `--line` at 3:1 against its own surface — 1.36 at worst (Newcastle) — so fixing it restyles all eighteen palettes. Tranche 2 also holds the resizer hit targets (8–10px against a 24×24 minimum) and `.utilities`/`.toast` covering focusable buttons.
+- Tranche 3 holds the two findings that need a new preference: `prefers-reduced-motion` handling for the word reader, and an off switch for the single-character shortcuts.
+- **Notes export was dropped**, 2026-11-17, Murray's call — the fixed Markdown download stays as the whole feature. Do not re-propose a dialog or prompt composer.
+- **Text-to-speech is shelved**, same date, on evidence rather than taste: Firefox fires no `boundary` events, so word-level highlighting of spoken text is impossible there, and all six local speech-dispatcher voices report `localService: false`, so no filter can certify a voice as on-device. Revisit only if those change.
 - Still open from before: re-land the reverted PDF-layout work, which needs real `rowsFromItems` output for `samples/dutch-auctions.pdf` captured from a working browser before it can be fixed locally.
 - Outstanding for Murray: verify the domain in GitHub's account settings against subdomain takeover, and export any notes he wants from the old github.io origin (`localStorage` is per-origin; an installed copy still serves from cache, so **Download backup** works there).
 
@@ -30,16 +33,17 @@ rendering, or the offline package; push to a branch and read the run before beli
 
 ## build
 
-- [ ] now — Group the theme menu into Light, Dark and University and add seven themes (Mist, Sage, Lavender, Gruvbox Light/Dark, Dracula, Night Owl). PR #1, awaiting CI. `tests/themes.test.js` holds every palette to a contrast bar under `node --test`, which is the first real theme coverage on a machine where Playwright cannot launch; `utsa`'s 4.06:1 accent is recorded as a deliberate exception rather than fixed.
-- [ ] later — Design a notes export dialog: file type, what to include, formatting, and optional locally composed prompts for an external assistant. Supersedes the notes-review-space task below; nothing may be sent anywhere.
-- [ ] later — Decide text-to-speech: bundled neural voices against `speechSynthesis`. The answer changes what the offline package is, so it gates the accessibility work behind it.
+- [x] 2026-11-17 — Group the theme menu into Light, Dark and University and add seven themes (Mist, Sage, Lavender, Gruvbox Light/Dark, Dracula, Night Owl). PR #1. `tests/themes.test.js` holds every palette to a contrast bar under `node --test`, the first real theme coverage on a machine where Playwright cannot launch; `utsa`'s 4.06:1 accent is a recorded exception, exact in both directions so it cannot rot.
+- [x] 2026-11-17 — Accessibility tranche 1: ten of the fifteen audit findings, plus two layout bugs the audit missed and only CI could surface. `.read-pane` lacked `min-height:0`, so as a grid item it refused to shrink and the reading card never became a scroll container — a long chunk stretched the page and pushed the toolbar and notes off screen. The card also centred its text with `align-items:center`, which puts the opening lines above `scrollTop:0` where they cannot be reached. PR #2, `docs/accessibility-audit-2026-11-17.md`.
+- [ ] next — Accessibility tranche 2, visible changes: `--line` at 3:1 across all eighteen palettes, resizer hit targets, overlays covering focusable buttons. Show Murray a render before changing any palette.
+- [ ] later — Accessibility tranche 3, needs a new preference: `prefers-reduced-motion` for the word reader, and an off switch for single-character shortcuts.
 - [x] 2026-11-08 — Implement the selected home/reader visual style and optional site-wide palettes, including responsive and contrast corrections.
 - [x] 2026-11-16 — Name the product **Reader** and publish it at https://reader.murraysbennett.com. Public identity only: title, `.toolbar .brand`, the setup header, the sample caption, `manifest.webmanifest` `name`, `tools/build-fable.mjs`'s DOCX creator and `samples/README.md`. The offline ZIP's date was hardcoded in three places and asserted as a literal in two specs, so it could never re-date; `index.html` now carries `__ZIP_NAME__`/`__RELEASE_DATE__` placeholders, `build.mjs` derives both and clears stale `dist/*.zip`. Verified live: title, manifest name and `reader-2026-11-16.zip` all serve from the new origin.
 - [x] 2026-11-07 — Widen the default reader text column while retaining edge padding and a narrower user choice.
 - [x] 2026-11-07 — Add paused word-reader entry and sentence/paragraph pacing with explicit N/Next between segments; preserve selection and notes anchors.
 - [x] 2026-11-07 — Build the approved six-example library and homepage entry points after verifying source rights and formats.
 - [x] 2026-11-07 — Complete and verify installable offline browser access, a downloadable desktop copy, and repo guidance. Native installers remain later.
-- [ ] later — Design a notes review space; the export half of this is now the notes export dialog task above.
+- [ ] later — Design a notes review space. The export half was considered and dropped on 2026-11-17; today's fixed Markdown download is the whole export feature.
 - [x] 2026-11-07 — Implement structured passages and font families, including a dyslexia-oriented option; leave preamble grouping unchanged unless requested again.
 - [x] 2026-11-07 — Implement the public reader design, verify it, and publish the static release.
 - [x] 2026-11-07 — Add paragraph/sentence/page chunking and content-fingerprint storage with backup validation.
