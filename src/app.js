@@ -29,11 +29,26 @@ try { const saved = JSON.parse(storage.getItem(PREF_KEY) || '{}'); if (validPref
 
 function status(message, error = false) {
   const el = $('toast');
-  el.textContent = message;
+  // Cleared first so an identical repeat is still a mutation, and so the text leaves the
+  // accessibility tree when the toast fades — it is hidden by opacity, not by display.
+  el.textContent = '';
   el.classList.add('show');
   el.dataset.error = String(error);
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
+  setTimeout(() => { el.textContent = message; }, 0);
+  toastTimer = setTimeout(() => { el.classList.remove('show'); el.textContent = ''; }, 3500);
+}
+
+// Disabling the button a keyboard user just pressed drops focus to <body>, so the next Tab
+// restarts at the top of the page. Every state in the group is applied before focus is
+// rescued: a neighbour being re-enabled in the same pass is a valid target, and checking
+// one button at a time would skip past it while it is still disabled.
+function setDisabledGroup(states, fallbacks) {
+  const focused = document.activeElement;
+  for (const [id, disabled] of states) $(id).disabled = disabled;
+  if (!(focused instanceof HTMLElement) || !focused.disabled) return;
+  const target = fallbacks.map(id => $(id)).find(el => el && !el.disabled && !el.hidden);
+  if (target) target.focus();
 }
 
 function savePrefs() { try { storage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch { status('Settings could not be saved in this browser.', true); } }
@@ -67,8 +82,10 @@ function setNotesVisible(visible, save = true) {
   $('note-pane').hidden = !prefs.notes;
   $('pane-resizer').hidden = !prefs.notes;
   $('app').classList.toggle('notes-hidden', !prefs.notes);
+  // No aria-pressed: the label already names the action, and a toggle state alongside a
+  // flipping label announces "Hide notes, pressed" / "Show notes, not pressed" — which
+  // contradicts itself whichever way it is read.
   $('notes-toggle').textContent = prefs.notes ? 'Hide notes' : 'Show notes';
-  $('notes-toggle').setAttribute('aria-pressed', String(prefs.notes));
   if (save) savePrefs();
 }
 
@@ -80,10 +97,10 @@ function saveDoc() {
   try { saveDocument(storage, doc); } catch { status('Could not save this document. Download a backup.', true); }
 }
 
-function renderNotes() {
-  const current = noteAnchor ?? chunks[chunkIndex]?.start ?? 0;
-  note.value = doc.notes[current]?.text || '';
-  $('note-title').textContent = `Paragraph ${current + 1}`;
+// Split from renderNotes so typing a note rebuilds only the list. Rewriting the textarea
+// mid-keystroke meant re-focusing and restoring the selection on every character, which
+// broke IME composition and made some screen readers re-announce per character.
+function renderNoteList() {
   const list = $('note-index');
   list.replaceChildren();
   const entries = Object.entries(doc.notes).filter(([, value]) => value?.text?.trim());
@@ -100,6 +117,13 @@ function renderNotes() {
   }
 }
 
+function renderNotes() {
+  const current = noteAnchor ?? chunks[chunkIndex]?.start ?? 0;
+  note.value = doc.notes[current]?.text || '';
+  $('note-title').textContent = `Paragraph ${current + 1}`;
+  renderNoteList();
+}
+
 function render() {
   if (!doc || !chunks.length) return;
   chunkIndex = Math.max(0, Math.min(chunks.length - 1, chunkIndex));
@@ -109,8 +133,9 @@ function render() {
   $('progress').textContent = `${chunkIndex + 1} of ${chunks.length} ${prefs.unit}${chunks.length === 1 ? '' : 's'}`;
   $('chunk-label').textContent = `${prefs.unit} ${chunkIndex + 1}`;
   renderChunk($('chunk-text'), chunk);
-  $('previous').disabled = chunkIndex === 0;
-  $('next').disabled = chunkIndex === chunks.length - 1;
+  setDisabledGroup(
+    [['previous', chunkIndex === 0], ['next', chunkIndex === chunks.length - 1]],
+    ['next', 'previous', 'word-start']);
   renderNotes(); saveDocSoon();
 }
 
@@ -191,9 +216,8 @@ note.addEventListener('input', () => {
   const i = noteAnchor ?? chunks[chunkIndex].start;
   if (note.value.trim()) doc.notes[i] = { text: note.value, source: paragraphHashes[i] };
   else delete doc.notes[i];
-  renderNoteIndexWithoutInput(); saveDoc();
+  renderNoteList(); saveDoc();
 });
-function renderNoteIndexWithoutInput() { const start = note.selectionStart, end = note.selectionEnd; renderNotes(); note.focus(); note.setSelectionRange(start, end); }
 
 function openAppearance() { $('font-preview').textContent = chunks[chunkIndex]?.text.slice(0, 100) || 'A paragraph to preview.'; $('appearance').showModal(); }
 $('appearance-open').addEventListener('click', openAppearance);
@@ -217,7 +241,17 @@ for (const section of ['themes', 'typography']) {
 for (const [id, key, cast] of [['theme', 'theme', String], ['font-family', 'fontFamily', String], ['font-size', 'fontSize', Number], ['line-height', 'lineHeight', Number], ['text-width', 'textWidth', Number], ['page-words', 'pageWords', Number], ['custom-bg', 'customBg', String], ['custom-text', 'customText', String], ['custom-accent', 'customAccent', String]]) {
   $(id).addEventListener('input', event => { prefs[key] = cast(event.target.value); applyPrefs(); savePrefs(); if (id === 'page-words' && doc && prefs.unit === 'page') setUnit('page'); });
 }
-$('utilities-open').addEventListener('click', () => { const open = $('utilities').hidden; $('utilities').hidden = !open; $('utilities-open').setAttribute('aria-expanded', String(open)); });
+// Every path that closes this menu goes through here. Three of them used to set `hidden`
+// directly and leave aria-expanded saying "true" for the rest of the session.
+function setUtilities(open) {
+  $('utilities').hidden = !open;
+  $('utilities-open').setAttribute('aria-expanded', String(open));
+}
+$('utilities-open').addEventListener('click', () => setUtilities($('utilities').hidden));
+$('utilities').addEventListener('keydown', event => {
+  if (event.key !== 'Escape') return;
+  event.preventDefault(); setUtilities(false); $('utilities-open').focus();
+});
 $('earlier-notes').addEventListener('click', () => {
   const list = $('earlier-notes-list');
   list.replaceChildren();
@@ -231,8 +265,8 @@ $('earlier-notes').addEventListener('click', () => {
   $('earlier-notes-dialog').showModal();
 });
 $('earlier-notes-close').addEventListener('click', () => $('earlier-notes-dialog').close());
-$('new-document').addEventListener('click', () => { saveDoc(); shell.hidden = true; setup.hidden = false; $('utilities').hidden = true; $('input').focus(); });
-$('shortcut-help').addEventListener('click', () => { $('utilities').hidden = true; $('shortcuts').showModal(); });
+$('new-document').addEventListener('click', () => { saveDoc(); shell.hidden = true; setup.hidden = false; setUtilities(false); $('input').focus(); });
+$('shortcut-help').addEventListener('click', () => { setUtilities(false); $('shortcuts').showModal(); });
 $('shortcuts-close').addEventListener('click', () => $('shortcuts').close());
 
 function download(name, text, type) {
@@ -268,7 +302,7 @@ async function restoreBackup(event) {
     paragraphHashes = await Promise.all(paragraphs.map(fingerprint));
     chunks = makeStructuredChunks(doc.version === 3 ? doc.blocks : parsePlain(doc.text, doc.name).blocks, prefs.unit, prefs.pageWords);
     chunkIndex = Math.max(0, chunks.findIndex(chunk => chunk.start <= doc.index && chunk.end >= doc.index));
-    render(); saveDoc(); $('utilities').hidden = true; status('Backup restored');
+    render(); saveDoc(); setUtilities(false); status('Backup restored');
   } catch (error) {
     const message = error.message || 'Could not restore backup.';
     if (setup.hidden) status(message, true);
@@ -280,12 +314,14 @@ for (const id of ['import-backup', 'setup-import-backup']) $(id).addEventListene
 
 function showWordState(state) {
   $('word-play').textContent = { ready: 'Start', playing: 'Pause', paused: 'Resume', waiting: 'Start', finished: 'Start' }[state];
-  $('word-play').disabled = state === 'waiting' || state === 'finished';
-  $('word-next').disabled = state !== 'waiting';
+  setDisabledGroup(
+    [['word-play', state === 'waiting' || state === 'finished'], ['word-next', state !== 'waiting']],
+    ['word-play', 'word-next', 'word-exit']);
   const segment = player.segments.length ? `Segment ${player.segmentIndex + 1} of ${player.segments.length}` : 'No words';
   const words = player.words.length ? ` · ${player.index} / ${player.words.length} words` : '';
   const stateLabel = { ready: 'Ready', playing: 'Playing', paused: 'Paused', waiting: 'Next ready', finished: 'Complete' }[state];
   $('word-progress').textContent = `${segment}${words} · ${stateLabel}`;
+  $('word-text').textContent = player.segments[player.segmentIndex] || '';
 }
 const player = new WordPlayer({
   onWord: word => { $('word-display').textContent = word; showWordState(player.state); },
@@ -372,6 +408,11 @@ document.addEventListener('keydown', event => {
   if (target instanceof HTMLElement && (target.matches('input, textarea, select, button, a') || target.isContentEditable)) return;
   if (event.metaKey || event.ctrlKey || event.altKey) return;
   if (event.key.toLowerCase() === 'n' && prefs.notes) { event.preventDefault(); note.focus(); return; }
+  // The reading card is a focusable div, so it slips past the guard above. When its text
+  // overflows, the paging keys belong to the card; stealing them left ArrowDown as the
+  // only way to read the rest of a long chunk.
+  if (document.activeElement === card && card.scrollHeight > card.clientHeight + 1
+    && [' ', 'PageDown', 'PageUp'].includes(event.key)) return;
   if (['ArrowRight', 'PageDown', ' ', 'j'].includes(event.key)) { event.preventDefault(); move(1); }
   if (['ArrowLeft', 'PageUp', 'k'].includes(event.key)) { event.preventDefault(); move(-1); }
 });

@@ -18,7 +18,7 @@ test('Markdown chunks render semantic emphasis, headings, lists and safe links',
 test('selected marked text in page mode returns to the correct note', async ({ page }) => {
   await page.goto('/');
   await page.locator('#file').setInputFiles({ name: 'guide.md', mimeType: 'text/markdown', buffer: Buffer.from('First paragraph.\n\nSecond **important words** here.') });
-  await page.getByLabel('Reading unit').selectOption('page');
+  await page.getByLabel('Read by').selectOption('page');
   await page.locator('#chunk-text strong').evaluate(el => {
     const range = document.createRange();
     range.selectNodeContents(el);
