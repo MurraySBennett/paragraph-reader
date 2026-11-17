@@ -92,7 +92,21 @@ test('an overflowing reading card keeps its own paging keys', async ({ page }) =
   await openReading(page, `${'A long sentence that wraps and wraps. '.repeat(90)}\n\nSecond paragraph.`);
   await page.locator('#paragraph').focus();
   const card = page.locator('#paragraph');
-  expect(await card.evaluate(el => el.scrollHeight > el.clientHeight + 1)).toBe(true);
+  // Reported as a blob so a failure says what the geometry actually was, rather than just
+  // "expected true, received false" with nothing to act on.
+  const geometry = await card.evaluate(el => {
+    const child = el.firstElementChild;
+    const style = getComputedStyle(el);
+    return {
+      overflows: el.scrollHeight > el.clientHeight + 1,
+      scrollHeight: el.scrollHeight, clientHeight: el.clientHeight,
+      display: style.display, overflowY: style.overflowY, alignItems: style.alignItems,
+      childHeight: Math.round(child.getBoundingClientRect().height),
+      childMargin: getComputedStyle(child).marginTop,
+      chars: el.textContent.length,
+    };
+  });
+  expect(JSON.stringify(geometry)).toContain('"overflows":true');
   // A centred flex item that overflows hides its own opening lines above scrollTop 0.
   expect(await card.evaluate(el => {
     el.scrollTop = 0;
