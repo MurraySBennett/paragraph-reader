@@ -10,7 +10,10 @@
   <link rel="stylesheet" href="./src/styles.css">
 </head>
 <body data-theme="after-hours">
-  <section id="setup" class="setup">
+  <!-- A landmark, not a section: this is the whole content of the entry screen, and
+       Bypass Blocks is satisfied by a landmark (ARIA11). #reader-shell is the other main
+       and is hidden whenever this one is not. -->
+  <main id="setup" class="setup" aria-label="Open a reading">
     <div class="setup-top"><strong>Reader</strong><button id="setup-appearance" type="button">Appearance</button></div>
     <div class="intro">
       <h1>Read at your own pace.</h1>
@@ -39,12 +42,12 @@
       </div></details>
     </section>
     <section class="keep-app" aria-labelledby="keep-title"><h2 id="keep-title">Keep Reader</h2><p>Install the browser app for offline use, or download a desktop copy. Notes can be stored separately in different browsers and copies; use a backup when switching.</p><div class="keep-actions"><button id="install-app" type="button">Install on this device</button><a id="download-copy" class="button" href="./dist/reader-offline.zip" download>Download offline copy</a><a href="https://github.com/MurraySBennett/paragraph-reader">View source on GitHub</a></div><details class="clone-help"><summary>Clone source for development</summary><code>git clone https://github.com/MurraySBennett/paragraph-reader.git</code></details><p id="install-guidance" class="muted small" role="status"></p></section>
-  </section>
+  </main>
 
   <main id="reader-shell" hidden>
     <header class="toolbar">
       <div class="brand"><span class="brand-mark">¶</span><span>Reader</span></div>
-      <div class="document-meta"><strong id="document-name"></strong><span id="progress"></span></div>
+      <div class="document-meta"><strong id="document-name"></strong><span id="progress" role="status"></span></div>
       <div class="toolbar-actions">
         <label class="unit-label">Read by <select id="unit"><option value="paragraph">Paragraph</option><option value="sentence">Sentence</option><option value="page">Page</option></select></label>
         <button id="notes-toggle" type="button">Hide notes</button>
@@ -105,7 +108,10 @@
 
   <dialog id="word-mode" class="word-mode" aria-label="Word reader">
     <div class="word-top"><button id="word-exit" type="button">← Back to reading</button><span id="word-progress"></span></div>
-    <div id="word-display" class="word-display" aria-live="off"></div>
+    <div id="word-display" class="word-display" aria-hidden="true"></div>
+    <!-- The one-word-at-a-time display is a visual device. Without this the dialog holds
+         no readable text at all, so a screen-reader user gets an empty modal. -->
+    <p id="word-text" class="visually-hidden"></p>
     <div class="word-controls"><button id="word-play" type="button" class="primary">Start</button><button id="word-next" type="button" disabled>Next segment</button><label>Segment <select id="word-segment" aria-label="Word segment"><option value="sentence">Sentence</option><option value="paragraph">Paragraph</option></select></label><label>Speed <input id="word-speed" aria-label="Speed in words per minute" type="range" min="100" max="800" step="25" value="300"><output id="word-speed-value">300 WPM</output></label></div>
   </dialog>
   <script id="boot-text" type="text/plain" data-source=""></script>

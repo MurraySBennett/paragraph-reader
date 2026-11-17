@@ -49,6 +49,26 @@ test('visible labels match accessible names on the toolbar and word controls', a
   await expect(page.locator('#word-speed')).toHaveAccessibleName(/^Speed/);
 });
 
+test('the word reader exposes the passage text, not only the flashing word', async ({ page }) => {
+  await openReading(page, 'The quick brown fox. It jumped over.\n\nSecond paragraph here.');
+  await page.getByRole('button', { name: 'Read words' }).click();
+  await expect(page.locator('#word-text')).toHaveText('The quick brown fox.');
+  await expect(page.locator('#word-display')).toHaveAttribute('aria-hidden', 'true');
+});
+
+test('position changes are announced and the entry screen is a landmark', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByRole('main')).toHaveCount(1);
+  await expect(page.locator('#setup')).toHaveRole('main');
+  await page.getByLabel('Paste text').fill('First paragraph.\n\nSecond paragraph.');
+  await page.getByRole('button', { name: 'Start reading' }).click();
+  await expect(page.getByRole('main')).toHaveCount(1);
+  await expect(page.locator('#progress')).toHaveRole('status');
+  await expect(page.locator('#progress')).toHaveText('1 of 2 paragraphs');
+  await page.getByRole('button', { name: 'Next' }).click();
+  await expect(page.locator('#progress')).toHaveText('2 of 2 paragraphs');
+});
+
 test('the notes toggle states itself through its label, not a contradictory pressed state', async ({ page }) => {
   await openReading(page);
   await expect(page.locator('#notes-toggle')).not.toHaveAttribute('aria-pressed');

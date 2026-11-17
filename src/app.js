@@ -301,6 +301,7 @@ function showWordState(state) {
   const words = player.words.length ? ` · ${player.index} / ${player.words.length} words` : '';
   const stateLabel = { ready: 'Ready', playing: 'Playing', paused: 'Paused', waiting: 'Next ready', finished: 'Complete' }[state];
   $('word-progress').textContent = `${segment}${words} · ${stateLabel}`;
+  $('word-text').textContent = player.segments[player.segmentIndex] || '';
 }
 const player = new WordPlayer({
   onWord: word => { $('word-display').textContent = word; showWordState(player.state); },
