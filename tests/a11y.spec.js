@@ -86,6 +86,9 @@ test('the utilities menu reports its own state and closes on Escape', async ({ p
 });
 
 test('an overflowing reading card keeps its own paging keys', async ({ page }) => {
+  // A short viewport guarantees the card overflows regardless of font metrics; sizing the
+  // text to a default viewport made this depend on how many characters fit a line.
+  await page.setViewportSize({ width: 900, height: 400 });
   await openReading(page, `${'A long sentence that wraps and wraps. '.repeat(90)}\n\nSecond paragraph.`);
   await page.locator('#paragraph').focus();
   const card = page.locator('#paragraph');
