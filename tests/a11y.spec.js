@@ -69,6 +69,43 @@ test('position changes are announced and the entry screen is a landmark', async 
   await expect(page.locator('#progress')).toHaveText('2 of 2 paragraphs');
 });
 
+test('the utilities menu reports its own state and closes on Escape', async ({ page }) => {
+  await openReading(page);
+  const trigger = page.getByRole('button', { name: 'Utilities' });
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  await trigger.click();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  await page.getByRole('button', { name: 'Keyboard shortcuts' }).click();
+  await page.getByRole('button', { name: 'Close keyboard shortcuts' }).click();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  await trigger.click();
+  await page.getByRole('button', { name: 'Download notes' }).focus();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#utilities')).toBeHidden();
+  await expect(trigger).toBeFocused();
+});
+
+test('an overflowing reading card keeps its own paging keys', async ({ page }) => {
+  await openReading(page, `${'A long sentence that wraps and wraps. '.repeat(90)}\n\nSecond paragraph.`);
+  await page.locator('#paragraph').focus();
+  const overflows = await page.locator('#paragraph').evaluate(el => el.scrollHeight > el.clientHeight + 1);
+  expect(overflows).toBe(true);
+  await page.keyboard.press('Space');
+  await expect(page.locator('#progress')).toHaveText('1 of 2 paragraphs');
+  expect(await page.locator('#paragraph').evaluate(el => el.scrollTop)).toBeGreaterThan(0);
+});
+
+test('typing a note neither steals focus nor disturbs the caret', async ({ page }) => {
+  await openReading(page);
+  const editor = page.getByLabel('Note for current paragraph');
+  await editor.fill('abcdef');
+  await editor.evaluate(el => el.setSelectionRange(3, 3));
+  await page.keyboard.type('X');
+  await expect(editor).toHaveValue('abcXdef');
+  await expect(editor).toBeFocused();
+  expect(await editor.evaluate(el => el.selectionStart)).toBe(4);
+});
+
 test('the notes toggle states itself through its label, not a contradictory pressed state', async ({ page }) => {
   await openReading(page);
   await expect(page.locator('#notes-toggle')).not.toHaveAttribute('aria-pressed');

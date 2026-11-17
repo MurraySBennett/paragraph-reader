@@ -95,10 +95,10 @@ function saveDoc() {
   try { saveDocument(storage, doc); } catch { status('Could not save this document. Download a backup.', true); }
 }
 
-function renderNotes() {
-  const current = noteAnchor ?? chunks[chunkIndex]?.start ?? 0;
-  note.value = doc.notes[current]?.text || '';
-  $('note-title').textContent = `Paragraph ${current + 1}`;
+// Split from renderNotes so typing a note rebuilds only the list. Rewriting the textarea
+// mid-keystroke meant re-focusing and restoring the selection on every character, which
+// broke IME composition and made some screen readers re-announce per character.
+function renderNoteList() {
   const list = $('note-index');
   list.replaceChildren();
   const entries = Object.entries(doc.notes).filter(([, value]) => value?.text?.trim());
@@ -113,6 +113,13 @@ function renderNotes() {
     });
     list.append(button);
   }
+}
+
+function renderNotes() {
+  const current = noteAnchor ?? chunks[chunkIndex]?.start ?? 0;
+  note.value = doc.notes[current]?.text || '';
+  $('note-title').textContent = `Paragraph ${current + 1}`;
+  renderNoteList();
 }
 
 function render() {
@@ -206,9 +213,8 @@ note.addEventListener('input', () => {
   const i = noteAnchor ?? chunks[chunkIndex].start;
   if (note.value.trim()) doc.notes[i] = { text: note.value, source: paragraphHashes[i] };
   else delete doc.notes[i];
-  renderNoteIndexWithoutInput(); saveDoc();
+  renderNoteList(); saveDoc();
 });
-function renderNoteIndexWithoutInput() { const start = note.selectionStart, end = note.selectionEnd; renderNotes(); note.focus(); note.setSelectionRange(start, end); }
 
 function openAppearance() { $('font-preview').textContent = chunks[chunkIndex]?.text.slice(0, 100) || 'A paragraph to preview.'; $('appearance').showModal(); }
 $('appearance-open').addEventListener('click', openAppearance);
@@ -232,7 +238,17 @@ for (const section of ['themes', 'typography']) {
 for (const [id, key, cast] of [['theme', 'theme', String], ['font-family', 'fontFamily', String], ['font-size', 'fontSize', Number], ['line-height', 'lineHeight', Number], ['text-width', 'textWidth', Number], ['page-words', 'pageWords', Number], ['custom-bg', 'customBg', String], ['custom-text', 'customText', String], ['custom-accent', 'customAccent', String]]) {
   $(id).addEventListener('input', event => { prefs[key] = cast(event.target.value); applyPrefs(); savePrefs(); if (id === 'page-words' && doc && prefs.unit === 'page') setUnit('page'); });
 }
-$('utilities-open').addEventListener('click', () => { const open = $('utilities').hidden; $('utilities').hidden = !open; $('utilities-open').setAttribute('aria-expanded', String(open)); });
+// Every path that closes this menu goes through here. Three of them used to set `hidden`
+// directly and leave aria-expanded saying "true" for the rest of the session.
+function setUtilities(open) {
+  $('utilities').hidden = !open;
+  $('utilities-open').setAttribute('aria-expanded', String(open));
+}
+$('utilities-open').addEventListener('click', () => setUtilities($('utilities').hidden));
+$('utilities').addEventListener('keydown', event => {
+  if (event.key !== 'Escape') return;
+  event.preventDefault(); setUtilities(false); $('utilities-open').focus();
+});
 $('earlier-notes').addEventListener('click', () => {
   const list = $('earlier-notes-list');
   list.replaceChildren();
@@ -246,8 +262,8 @@ $('earlier-notes').addEventListener('click', () => {
   $('earlier-notes-dialog').showModal();
 });
 $('earlier-notes-close').addEventListener('click', () => $('earlier-notes-dialog').close());
-$('new-document').addEventListener('click', () => { saveDoc(); shell.hidden = true; setup.hidden = false; $('utilities').hidden = true; $('input').focus(); });
-$('shortcut-help').addEventListener('click', () => { $('utilities').hidden = true; $('shortcuts').showModal(); });
+$('new-document').addEventListener('click', () => { saveDoc(); shell.hidden = true; setup.hidden = false; setUtilities(false); $('input').focus(); });
+$('shortcut-help').addEventListener('click', () => { setUtilities(false); $('shortcuts').showModal(); });
 $('shortcuts-close').addEventListener('click', () => $('shortcuts').close());
 
 function download(name, text, type) {
@@ -283,7 +299,7 @@ async function restoreBackup(event) {
     paragraphHashes = await Promise.all(paragraphs.map(fingerprint));
     chunks = makeStructuredChunks(doc.version === 3 ? doc.blocks : parsePlain(doc.text, doc.name).blocks, prefs.unit, prefs.pageWords);
     chunkIndex = Math.max(0, chunks.findIndex(chunk => chunk.start <= doc.index && chunk.end >= doc.index));
-    render(); saveDoc(); $('utilities').hidden = true; status('Backup restored');
+    render(); saveDoc(); setUtilities(false); status('Backup restored');
   } catch (error) {
     const message = error.message || 'Could not restore backup.';
     if (setup.hidden) status(message, true);
@@ -388,6 +404,11 @@ document.addEventListener('keydown', event => {
   if (target instanceof HTMLElement && (target.matches('input, textarea, select, button, a') || target.isContentEditable)) return;
   if (event.metaKey || event.ctrlKey || event.altKey) return;
   if (event.key.toLowerCase() === 'n' && prefs.notes) { event.preventDefault(); note.focus(); return; }
+  // The reading card is a focusable div, so it slips past the guard above. When its text
+  // overflows, the paging keys belong to the card; stealing them left ArrowDown as the
+  // only way to read the rest of a long chunk.
+  if (document.activeElement === card && card.scrollHeight > card.clientHeight + 1
+    && [' ', 'PageDown', 'PageUp'].includes(event.key)) return;
   if (['ArrowRight', 'PageDown', ' ', 'j'].includes(event.key)) { event.preventDefault(); move(1); }
   if (['ArrowLeft', 'PageUp', 'k'].includes(event.key)) { event.preventDefault(); move(-1); }
 });
