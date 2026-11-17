@@ -88,11 +88,16 @@ test('the utilities menu reports its own state and closes on Escape', async ({ p
 test('an overflowing reading card keeps its own paging keys', async ({ page }) => {
   await openReading(page, `${'A long sentence that wraps and wraps. '.repeat(90)}\n\nSecond paragraph.`);
   await page.locator('#paragraph').focus();
-  const overflows = await page.locator('#paragraph').evaluate(el => el.scrollHeight > el.clientHeight + 1);
-  expect(overflows).toBe(true);
+  const card = page.locator('#paragraph');
+  expect(await card.evaluate(el => el.scrollHeight > el.clientHeight + 1)).toBe(true);
+  // A centred flex item that overflows hides its own opening lines above scrollTop 0.
+  expect(await card.evaluate(el => {
+    el.scrollTop = 0;
+    return el.firstElementChild.getBoundingClientRect().top >= el.getBoundingClientRect().top - 1;
+  })).toBe(true);
   await page.keyboard.press('Space');
   await expect(page.locator('#progress')).toHaveText('1 of 2 paragraphs');
-  expect(await page.locator('#paragraph').evaluate(el => el.scrollTop)).toBeGreaterThan(0);
+  expect(await card.evaluate(el => el.scrollTop)).toBeGreaterThan(0);
 });
 
 test('typing a note neither steals focus nor disturbs the caret', async ({ page }) => {
