@@ -27,7 +27,7 @@ test('reading unit, appearance, and pane size are adjustable', async ({ page }) 
   await page.goto('/');
   await page.getByLabel('Paste text').fill('One. Two.\n\nThree.');
   await page.getByRole('button', { name: 'Start reading' }).click();
-  await page.getByLabel('Reading unit').selectOption('sentence');
+  await page.getByLabel('Read by').selectOption('sentence');
   await expect(page.locator('#chunk-text')).toContainText('One.');
   await page.getByRole('button', { name: 'Appearance' }).click();
   await expect(page.getByRole('tab', { name: 'Themes' })).toBeVisible();
@@ -171,14 +171,14 @@ test('selected passage in a page returns notes to its source paragraph', async (
   await page.goto('/');
   await page.getByLabel('Paste text').fill('First paragraph.\n\nSecond paragraph has words.');
   await page.getByRole('button', { name: 'Start reading' }).click();
-  await page.getByLabel('Reading unit').selectOption('page');
+  await page.getByLabel('Read by').selectOption('page');
   await page.locator('#chunk-text').evaluate(el => { const text = el.querySelectorAll('p')[1].firstChild; const range = document.createRange(); range.setStart(text, 0); range.setEnd(text, 6); const selection = getSelection(); selection.removeAllRanges(); selection.addRange(range); });
   await page.getByRole('button', { name: 'Read words' }).click();
   await page.getByRole('button', { name: 'Start', exact: true }).click();
   await page.getByRole('button', { name: 'Back to reading' }).click();
   await expect(page.locator('#note-title')).toHaveText('Paragraph 2');
   await page.getByLabel('Note for current paragraph').fill('About second');
-  await page.getByLabel('Reading unit').selectOption('paragraph');
+  await page.getByLabel('Read by').selectOption('paragraph');
   await page.getByRole('button', { name: 'Next chunk' }).click();
   await expect(page.getByLabel('Note for current paragraph')).toHaveValue('About second');
 });
@@ -236,7 +236,7 @@ test('word mode starts at the current sentence and changing segment choice reset
   await page.goto('/');
   await page.getByLabel('Paste text').fill('First. Second.\n\nThird.');
   await page.getByRole('button', { name: 'Start reading' }).click();
-  await page.getByLabel('Reading unit').selectOption('sentence');
+  await page.getByLabel('Read by').selectOption('sentence');
   await page.getByRole('button', { name: 'Next chunk' }).click();
   await page.getByRole('button', { name: 'Read words' }).click();
   await expect(page.locator('#word-progress')).toContainText('Segment 1 of 2');
@@ -252,7 +252,7 @@ test('selected paragraphs bound word mode and retain paragraph segmentation', as
   await page.goto('/');
   await page.getByLabel('Paste text').fill('First selected.\n\nSecond selected.\n\nThird outside.');
   await page.getByRole('button', { name: 'Start reading' }).click();
-  await page.getByLabel('Reading unit').selectOption('page');
+  await page.getByLabel('Read by').selectOption('page');
   await page.locator('#chunk-text').evaluate(el => {
     const parts = el.querySelectorAll('p');
     const range = document.createRange();

@@ -46,8 +46,8 @@
       <div class="brand"><span class="brand-mark">¶</span><span>Reader</span></div>
       <div class="document-meta"><strong id="document-name"></strong><span id="progress"></span></div>
       <div class="toolbar-actions">
-        <label class="unit-label">Read by <select id="unit" aria-label="Reading unit"><option value="paragraph">Paragraph</option><option value="sentence">Sentence</option><option value="page">Page</option></select></label>
-        <button id="notes-toggle" type="button" aria-pressed="true">Hide notes</button>
+        <label class="unit-label">Read by <select id="unit"><option value="paragraph">Paragraph</option><option value="sentence">Sentence</option><option value="page">Page</option></select></label>
+        <button id="notes-toggle" type="button">Hide notes</button>
         <button id="appearance-open" type="button">Appearance</button>
         <button id="utilities-open" type="button" aria-expanded="false" aria-controls="utilities">Utilities</button>
       </div>
@@ -106,7 +106,7 @@
   <dialog id="word-mode" class="word-mode" aria-label="Word reader">
     <div class="word-top"><button id="word-exit" type="button">← Back to reading</button><span id="word-progress"></span></div>
     <div id="word-display" class="word-display" aria-live="off"></div>
-    <div class="word-controls"><button id="word-play" type="button" class="primary">Start</button><button id="word-next" type="button" disabled>Next segment</button><label>Segment <select id="word-segment" aria-label="Word segment"><option value="sentence">Sentence</option><option value="paragraph">Paragraph</option></select></label><label>Speed <input id="word-speed" aria-label="Words per minute" type="range" min="100" max="800" step="25" value="300"><output id="word-speed-value">300 WPM</output></label></div>
+    <div class="word-controls"><button id="word-play" type="button" class="primary">Start</button><button id="word-next" type="button" disabled>Next segment</button><label>Segment <select id="word-segment" aria-label="Word segment"><option value="sentence">Sentence</option><option value="paragraph">Paragraph</option></select></label><label>Speed <input id="word-speed" aria-label="Speed in words per minute" type="range" min="100" max="800" step="25" value="300"><output id="word-speed-value">300 WPM</output></label></div>
   </dialog>
   <script id="boot-text" type="text/plain" data-source=""></script>
   <script type="module" src="./dist/app.js"></script>

@@ -29,11 +29,24 @@ try { const saved = JSON.parse(storage.getItem(PREF_KEY) || '{}'); if (validPref
 
 function status(message, error = false) {
   const el = $('toast');
-  el.textContent = message;
+  // Cleared first so an identical repeat is still a mutation, and so the text leaves the
+  // accessibility tree when the toast fades — it is hidden by opacity, not by display.
+  el.textContent = '';
   el.classList.add('show');
   el.dataset.error = String(error);
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
+  setTimeout(() => { el.textContent = message; }, 0);
+  toastTimer = setTimeout(() => { el.classList.remove('show'); el.textContent = ''; }, 3500);
+}
+
+// Disabling the button a keyboard user just pressed drops focus to <body>, so the next Tab
+// restarts at the top of the page. Move focus somewhere stable before taking it away.
+function setDisabled(button, disabled, ...fallbacks) {
+  if (disabled && document.activeElement === button) {
+    const target = fallbacks.map(id => $(id)).find(el => el && !el.disabled && !el.hidden);
+    if (target) target.focus();
+  }
+  button.disabled = disabled;
 }
 
 function savePrefs() { try { storage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch { status('Settings could not be saved in this browser.', true); } }
@@ -67,8 +80,10 @@ function setNotesVisible(visible, save = true) {
   $('note-pane').hidden = !prefs.notes;
   $('pane-resizer').hidden = !prefs.notes;
   $('app').classList.toggle('notes-hidden', !prefs.notes);
+  // No aria-pressed: the label already names the action, and a toggle state alongside a
+  // flipping label announces "Hide notes, pressed" / "Show notes, not pressed" — which
+  // contradicts itself whichever way it is read.
   $('notes-toggle').textContent = prefs.notes ? 'Hide notes' : 'Show notes';
-  $('notes-toggle').setAttribute('aria-pressed', String(prefs.notes));
   if (save) savePrefs();
 }
 
@@ -109,8 +124,8 @@ function render() {
   $('progress').textContent = `${chunkIndex + 1} of ${chunks.length} ${prefs.unit}${chunks.length === 1 ? '' : 's'}`;
   $('chunk-label').textContent = `${prefs.unit} ${chunkIndex + 1}`;
   renderChunk($('chunk-text'), chunk);
-  $('previous').disabled = chunkIndex === 0;
-  $('next').disabled = chunkIndex === chunks.length - 1;
+  setDisabled($('previous'), chunkIndex === 0, 'next', 'word-start');
+  setDisabled($('next'), chunkIndex === chunks.length - 1, 'previous', 'word-start');
   renderNotes(); saveDocSoon();
 }
 
@@ -280,8 +295,8 @@ for (const id of ['import-backup', 'setup-import-backup']) $(id).addEventListene
 
 function showWordState(state) {
   $('word-play').textContent = { ready: 'Start', playing: 'Pause', paused: 'Resume', waiting: 'Start', finished: 'Start' }[state];
-  $('word-play').disabled = state === 'waiting' || state === 'finished';
-  $('word-next').disabled = state !== 'waiting';
+  setDisabled($('word-play'), state === 'waiting' || state === 'finished', 'word-next', 'word-exit');
+  setDisabled($('word-next'), state !== 'waiting', 'word-play', 'word-exit');
   const segment = player.segments.length ? `Segment ${player.segmentIndex + 1} of ${player.segments.length}` : 'No words';
   const words = player.words.length ? ` · ${player.index} / ${player.words.length} words` : '';
   const stateLabel = { ready: 'Ready', playing: 'Playing', paused: 'Paused', waiting: 'Next ready', finished: 'Complete' }[state];
